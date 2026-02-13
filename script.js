@@ -126,46 +126,95 @@ function aggiornaCarrelloUI() {
     `).join('');
 }
 
-// 4. GENERAZIONE PDF PROFESSIONALE
-async function generaPDF() {
+async function generaEInviaPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+    
+    // Recupero dati dai campi
+    const operatore = document.getElementById('operatore').value;
+    const zona = document.getElementById('zona').value;
+    const dataInt = document.getElementById('dataIntervento').value;
 
-    const img = document.querySelector('.header-logo img');
-    if (img) {
-        // Parametri: immagine, formato, x, y, larghezza, altezza
-        doc.addImage(img, 'PNG', 10, 10, 60, 25);
+    if (!operatore || !zona) {
+        alert("Per favore, inserisci Operatore e Zona prima di inviare.");
+        return;
     }
 
+    // --- COSTRUZIONE PDF (come già facevi) ---
+    const img = document.querySelector('.header-logo img');
+    if (img) doc.addImage(img, 'PNG', 10, 10, 50, 20);
     doc.setFontSize(18);
-    doc.setTextColor(0, 74, 153); // Blu Danea
-    doc.text("RAPPORTO DI MANUTENZIONE", 80, 25);
-    
-    doc.setDrawColor(0, 74, 153);
-    doc.line(10, 40, 200, 40); // Linea estetica
-
+    doc.text("RAPPORTO DI MANUTENZIONE", 70, 25);
     doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Operatore: ${document.getElementById('operatore').value}`, 10, 50);
-    doc.text(`Zona: ${document.getElementById('zona').value}`, 10, 60);
-    doc.text(`Data: ${document.getElementById('dataIntervento').value}`, 10, 70);
+    doc.text(`Operatore: ${operatore}`, 10, 50);
+    doc.text(`Zona: ${zona}`, 10, 60);
+    doc.text(`Data: ${dataInt}`, 10, 70);
 
-    doc.setFont("helvetica", "bold");
     doc.text("Materiali utilizzati:", 10, 90);
-    doc.setFont("helvetica", "normal");
-    
     let y = 100;
     carrello.forEach((item) => {
-        doc.text(`- [${item.qta}] ${item.cod}: ${item.desc}`, 15, y);
+        doc.text(`- ${item.cod}: ${item.desc} (Q.tà: ${item.qta})`, 15, y);
         y += 10;
-        if (y > 270) { doc.addPage(); y = 20; }
     });
 
-    if (signaturePad && !signaturePad.isEmpty()) {
-        const firmaData = signaturePad.toDataURL();
-        doc.text("Firma Cliente:", 10, y + 20);
-        doc.addImage(firmaData, 'PNG', 10, y + 25, 50, 25);
+    let firmaBase64 = "";
+    if (!signaturePad.isEmpty()) {
+        firmaBase64 = signaturePad.toDataURL();
+        doc.text("Firma Cliente:", 10, y + 10);
+        doc.addImage(firmaBase64, 'PNG', 10, y + 15, 50, 20);
     }
 
-    doc.save(`Rapportino_${document.getElementById('zona').value || 'Intervento'}.pdf`);
+    // Trasformiamo il PDF in una stringa Base64 per l'invio via API
+    const pdfBase64 = doc.output('datauristring');
+
+    // --- STEP A: SALVATAGGIO SU SUPABASE ---
+    console.log("Salvataggio nel database...");
+    const { error: dbError } = await supabaseClient
+        .from('rapportini')
+        .insert([{
+            operatore: operatore,
+            zona: zona,
+            data: dataInt,
+            materiali: carrello,
+            firma: firmaBase64
+        }]);
+
+    if (dbError) {
+        alert("Errore salvataggio DB: " + dbError.message);
+        return;
+    }
+
+    // --- STEP B: INVIO VIA RESEND ---
+    console.log("Invio email tramite Resend...");
+    
+    // Usiamo l'API di Resend direttamente (Metodo veloce per il prototipo)
+    const emailRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer re_9vyoQUPF_AGCtEg6ALeFDzcyavtiKz4iq'
+        },
+        body: JSON.stringify({
+            from: 'Rapportini <onboarding@resend.dev>',
+            to: ['l.damario@pannellitermici.it'],
+            cc: ['l.ripa@pannellitermici.it'],
+            subject: `Rapporto di intervento del ${dataInt} - ${operatore}`,
+            html: `<p>Nuovo rapporto di intervento caricato per la zona: <strong>${zona}</strong></p>`,
+            attachments: [
+                {
+                    filename: `Rapporto_${zona}.pdf`,
+                    content: pdfBase64.split(',')[1] // Rimuove l'intestazione data:application/pdf;base64,
+                }
+            ]
+        })
+    });
+
+    if (emailRes.ok) {
+        alert("✅ Rapporto inviato con successo a l.damario e salvato nel Cloud!");
+        doc.save(`Rapportino_${zona}.pdf`); // Scarica comunque una copia locale
+    } else {
+        const errData = await emailRes.json();
+        console.error(errData);
+        alert("❌ Errore invio email: " + errData.message);
+    }
 }
