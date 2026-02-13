@@ -187,7 +187,7 @@ async function generaEInviaPDF() {
                 'Authorization': 'Bearer re_9vyoQUPF_AGCtEg6ALeFDzcyavtiKz4iq'
             },
             body: JSON.stringify({
-                from: 'Rapportini <onboarding@resend.dev>',
+                from: 'Rapportini <invio@pannellitermici.it>',
                 to: ['l.damario@pannellitermici.it'],
                 cc: ['l.ripa@pannellitermici.it'],
                 subject: `Rapporto ${dataInt} - ${operatore} (${zona})`,
@@ -211,3 +211,4 @@ async function generaEInviaPDF() {
         alert("❌ Errore: " + err.message);
     }
 }
+
