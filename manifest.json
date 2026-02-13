@@ -1,15 +1,24 @@
 {
-  "name": "PT Rapportini",
+  "name": "Pannelli Termici Rapportini",
   "short_name": "PT App",
+  "description": "App per la gestione dei rapportini tecnici",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#004a99",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
   "theme_color": "#004a99",
   "icons": [
     {
-      "src": "logo-icon.png",
+      "src": "logo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
