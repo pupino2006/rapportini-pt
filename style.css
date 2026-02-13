@@ -1,0 +1,195 @@
+/* RESET E BASE */
+body { 
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+    margin: 0; 
+    background: #f0f2f5; 
+    color: #333;
+}
+
+/* HEADER E LOGO */
+.header-logo {
+    width: 100%;
+    background: white;
+    padding: 10px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+}
+
+.header-logo img {
+    height: 60px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* NAVIGAZIONE A SCHEDE (TABS) */
+.tabs { 
+    display: flex; 
+    background: #004a99; 
+    position: sticky; 
+    top: 0; 
+    z-index: 1000; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.tab-btn { 
+    flex: 1; 
+    padding: 15px 5px; 
+    border: none; 
+    background: none; 
+    color: rgba(255,255,255,0.7); 
+    font-weight: bold; 
+    font-size: 0.75rem; 
+    text-transform: uppercase;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.tab-btn.active { 
+    color: white;
+    background: #003366; 
+    border-bottom: 4px solid #ff9800; 
+}
+
+/* CONTENUTO SCHEDE */
+.tab-content { 
+    display: none; 
+    padding: 20px; 
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active { 
+    display: block; 
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* FORM E INPUT */
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label { 
+    display: block; 
+    margin-top: 15px; 
+    font-weight: bold; 
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.input-group input, .input-group select { 
+    width: 100%; 
+    padding: 12px; 
+    margin-top: 5px; 
+    border-radius: 8px; 
+    border: 1px solid #ccc; 
+    box-sizing: border-box; 
+    font-size: 1rem;
+    background: white;
+}
+
+/* RICERCA ARTICOLI (SUPABASE) */
+.search-box {
+    position: relative;
+}
+
+#risultatiRicerca { 
+    position: absolute; 
+    width: 100%;
+    z-index: 9999; 
+    background: white; 
+    max-height: 250px; 
+    overflow-y: auto; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+    border-radius: 0 0 10px 10px;
+    border: 1px solid #ddd;
+    border-top: none;
+}
+
+.item-ricerca { 
+    padding: 15px; 
+    border-bottom: 1px solid #eee; 
+    cursor: pointer; 
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.item-ricerca:last-child { border-bottom: none; }
+.item-ricerca:active { background: #f0f7ff; }
+
+/* LISTA MATERIALI SELEZIONATI */
+.card-materiale { 
+    background: white; 
+    padding: 12px; 
+    margin-top: 10px; 
+    border-radius: 10px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 5px solid #004a99;
+}
+
+.card-materiale input { 
+    width: 60px; 
+    padding: 8px; 
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+/* FIRMA (CANVAS) */
+.firma-container {
+    text-align: center;
+}
+
+.canvas-wrapper {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    border: 2px dashed #004a99;
+    border-radius: 10px;
+    background: white;
+    overflow: hidden;
+}
+
+#signature-pad {
+    display: block;
+    width: 100%;
+    height: 250px;
+    touch-action: none; /* Fondamentale per far funzionare il dito su smartphone */
+}
+
+.btn-clear {
+    margin-top: 10px;
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+/* BOTTONE INVIO FINALE */
+.btn-send { 
+    width: 100%; 
+    background: #28a745; 
+    color: white; 
+    padding: 20px; 
+    border: none; 
+    border-radius: 12px; 
+    font-size: 1.1rem; 
+    font-weight: bold; 
+    margin-top: 30px; 
+    box-shadow: 0 4px 6px rgba(40, 167, 69, 0.3);
+    cursor: pointer;
+}
+
+.btn-send:active {
+    transform: scale(0.98);
+    background: #218838;
+}

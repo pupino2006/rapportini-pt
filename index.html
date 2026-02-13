@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>App Rapportini</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+<div id="app">
+<div class="header-logo" style="background: white; padding: 20px; text-align: center;">
+    <img src="PT marchio payoff 1 riga RGB HR.png" alt="Logo" style="max-height: 100px; width: auto; display: block; margin: 0 auto;">
+</div>
+
+    <nav class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'tab1')">📋 DATI</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab2')">📦 MAT.</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab3')">✍️ FIRMA</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab4')">🚀 INVIO</button>
+    </nav>
+
+    <section id="tab1" class="tab-content active">
+        <div class="input-group">
+            <label>Zona Intervento</label>
+            <input type="text" id="zona" placeholder="Inserisci luogo...">
+            
+            <label>Operatore</label>
+            <input type="text" id="operatore" placeholder="Nome tecnico">
+            
+            <label>Data</label>
+            <input type="date" id="dataIntervento">
+        </div>
+    </section>
+
+    <section id="tab2" class="tab-content">
+        <div class="search-box">
+            <input type="text" id="searchArticolo" onkeyup="searchInDanea()" placeholder="Cerca nel DB Articoli...">
+        </div>
+        <div id="risultatiRicerca" class="lista-dropdown"></div>
+        
+        <h3>Articoli Selezionati</h3>
+        <div id="carrelloMateriali">
+            </div>
+    </section>
+
+    <section id="tab3" class="tab-content">
+        <div class="firma-container">
+            <label>Firma del Cliente</label>
+            <div class="canvas-wrapper">
+                <canvas id="signature-pad"></canvas>
+            </div>
+            <button class="btn-clear" onclick="signaturePad.clear()">Cancella Firma</button>
+        </div>
+        <hr>
+        <div class="foto-container">
+            <label>Foto Intervento</label>
+            <input type="file" id="fotoInput" accept="image/*" multiple>
+        </div>
+    </section>
+
+    <section id="tab4" class="tab-content">
+        <div id="riepilogo">
+            <p>Controlla i dati prima di generare il PDF professionale.</p>
+        </div>
+        <button class="btn-send" onclick="generaPDF()">GENERA E SALVA PDF</button>
+    </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script src="script.js"></script>
+</body>
+</html>
