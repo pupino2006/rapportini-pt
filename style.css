@@ -211,3 +211,24 @@ body {
     background: #218838;
 
 }
+
+.item-ricerca {
+    display: flex;         /* Allinea immagine e testo sulla stessa riga */
+    align-items: center;
+    gap: 15px;             /* Spazio tra immagine e testo */
+    padding: 12px;
+}
+
+.img-articolo {
+    width: 50px;           /* Dimensione fissa */
+    height: 50px;
+    object-fit: cover;     /* Evita che l'immagine si deformi */
+    border-radius: 8px;    /* Angoli leggermente arrotondati */
+    background: #eee;      /* Colore di sfondo se l'immagine manca */
+    border: 1px solid #ddd;
+}
+
+.info-articolo {
+    display: flex;
+    flex-direction: column; /* Nome sopra, codice o prezzo sotto */
+}
