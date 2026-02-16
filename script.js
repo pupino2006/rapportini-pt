@@ -49,22 +49,47 @@ async function searchInDanea() {
     let input = document.getElementById('searchArticolo');
     let query = input.value.trim();
     let divRisultati = document.getElementById('risultatiRicerca');
-    if (query.length < 2) { divRisultati.innerHTML = ""; return; }
+    
+    // Se la query è troppo corta, pulisci i risultati e ferma la funzione
+    if (query.length < 2) { 
+        divRisultati.innerHTML = ""; 
+        return; 
+    }
 
+    // Cerchiamo nella tabella 'articoli' (il tuo magazzino)
     const { data, error } = await supabaseClient
         .from('articoli')
-        .select('"Cod.", "Descrizione"')
+        .select('"Cod.", "Descrizione", "Immagine"') // Prendiamo anche la colonna Immagine
         .or(`"Cod.".ilike.%${query}%,"Descrizione".ilike.%${query}%`)
         .limit(10);
 
-    if (error) return;
+    if (error) {
+        console.error("Errore ricerca:", error);
+        return;
+    }
+
     divRisultati.innerHTML = "";
+    
     data.forEach(art => {
         let p = document.createElement('div');
         p.className = "item-ricerca";
-        p.style = "padding:15px; border-bottom:1px solid #eee; background:white; cursor:pointer; color:black;";
-        p.innerHTML = `<strong>${art["Cod."]}</strong> - ${art["Descrizione"]}`;
+        
+        // Se la colonna 'Immagine' è vuota, usiamo un'icona di default
+        let imgUrl = art["Immagine"] ? art["Immagine"] : 'https://via.placeholder.com/50?text=No+Img';
+
+        // Costruiamo la riga del risultato con l'anteprima
+        p.innerHTML = `
+            <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
+                <img src="${imgUrl}" style="width:50px; height:50px; object-fit:cover; border-radius:5px; margin-right:15px; border: 1px solid #ddd;">
+                <div>
+                    <strong style="color: #005aab;">${art["Cod."]}</strong><br>
+                    <small style="color: #333;">${art["Descrizione"]}</small>
+                </div>
+            </div>
+        `;
+        
         p.onclick = () => {
+            // Aggiungiamo al carrello dei materiali
             carrello.push({ cod: art["Cod."], desc: art["Descrizione"], qta: 1 });
             aggiornaCarrelloUI();
             divRisultati.innerHTML = "";
@@ -87,7 +112,6 @@ function aggiornaCarrelloUI() {
     `).join('');
 }
 
-// Funzione fondamentale per leggere le foto
 function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -97,6 +121,7 @@ function readFileAsDataURL(file) {
     });
 }
 
+// --- MODIFICA: GENERAZIONE PDF CON DESCRIZIONE INTERVENTO ---
 async function generaEInviaPDF() {
     console.log("Inizio procedura...");
     try {
@@ -106,6 +131,7 @@ async function generaEInviaPDF() {
         const operatore = document.getElementById('operatore').value;
         const zona = document.getElementById('zona').value;
         const dataInt = document.getElementById('dataIntervento').value;
+        const descrizione = document.getElementById('descrizioneIntervento').value; // Recupero descrizione
 
         if (!operatore || !zona) {
             alert("⚠️ Inserisci Operatore e Zona!");
@@ -122,17 +148,26 @@ async function generaEInviaPDF() {
         doc.setTextColor(0, 74, 153);
         doc.text("RAPPORTO DI MANUTENZIONE", 70, 22);
         
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.text(`Operatore: ${operatore}`, 10, 45);
         doc.text(`Zona: ${zona}`, 10, 52);
         doc.text(`Data: ${dataInt}`, 10, 59);
 
+        // --- SEZIONE DESCRIZIONE INTERVENTO ---
+        doc.setFont("helvetica", "bold");
+        doc.text("Descrizione Intervento:", 10, 70);
+        doc.setFont("helvetica", "normal");
+        const splitDesc = doc.splitTextToSize(descrizione, 180); // Manda a capo il testo lungo
+        doc.text(splitDesc, 10, 77);
+        
+        let currentY = 77 + (splitDesc.length * 7);
+
         // --- PDF: MATERIALI ---
         doc.setFont("helvetica", "bold");
-        doc.text("Materiali utilizzati:", 10, 75);
+        doc.text("Materiali utilizzati:", 10, currentY + 10);
         doc.setFont("helvetica", "normal");
-        let y = 82;
+        let y = currentY + 17;
         carrello.forEach((item) => {
             doc.text(`- [${item.qta}] ${item.cod}: ${item.desc}`, 15, y);
             y += 8;
@@ -147,7 +182,7 @@ async function generaEInviaPDF() {
             y += 35;
         }
 
-        // --- PDF: FOTO (Nuova Pagina) ---
+        // --- PDF: FOTO ---
         const fotoFiles = document.getElementById('fotoInput').files;
         if (fotoFiles.length > 0) {
             doc.addPage();
@@ -166,13 +201,14 @@ async function generaEInviaPDF() {
 
         const pdfBase64 = doc.output('datauristring');
 
-        // --- SALVATAGGIO SUPABASE ---
+        // --- SALVATAGGIO SUPABASE (con colonna descrizione) ---
         const { error: dbError } = await supabaseClient
             .from('rapportini')
             .insert([{
                 operatore: operatore,
                 zona: zona,
                 data: dataInt,
+                descrizione: descrizione, // Assicurati che la colonna esista su Supabase
                 materiali: carrello,
                 firma: firmaData
             }]);
@@ -191,7 +227,10 @@ async function generaEInviaPDF() {
                 to: ['l.damario@pannellitermici.it'],
                 cc: ['l.ripa@pannellitermici.it'],
                 subject: `Rapporto ${dataInt} - ${operatore} (${zona})`,
-                html: `<p>Intervento eseguito da <b>${operatore}</b> a <b>${zona}</b>.</p>`,
+                html: `
+                    <p>Intervento eseguito da <b>${operatore}</b> a <b>${zona}</b>.</p>
+                    <p><b>Descrizione:</b> ${descrizione}</p>
+                `,
                 attachments: [{
                     filename: `Rapporto_${zona}.pdf`,
                     content: pdfBase64.split(',')[1]
@@ -211,4 +250,3 @@ async function generaEInviaPDF() {
         alert("❌ Errore: " + err.message);
     }
 }
-
