@@ -95,6 +95,23 @@ body {
 /* RICERCA ARTICOLI (SUPABASE) */
 .search-box {
     position: relative;
+    margin-bottom: 10px; /* Spazio sotto la casella */
+}
+
+/* QUESTA È LA PARTE NUOVA PER INGRANDIRE LA CASELLA */
+#searchArticolo {
+    width: 100%;
+    padding: 18px 15px;    /* Aumenta l'altezza interna */
+    font-size: 1.2rem;     /* Testo molto più grande */
+    border: 2px solid #005aab; /* Bordo blu più spesso */
+    border-radius: 10px;   /* Angoli arrotondati */
+    box-sizing: border-box;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* Leggera ombra */
+    outline: none;         /* Toglie il bordo brutto al clic */
+}
+
+#searchArticolo:focus {
+    border-color: #ff8c00; /* Cambia colore (Arancione) quando scrivi */
 }
 
 #risultatiRicerca { 
@@ -114,7 +131,7 @@ body {
     padding: 15px; 
     border-bottom: 1px solid #eee; 
     cursor: pointer; 
-    font-size: 0.9rem;
+    font-size: 1.1rem; /* Ingrandito leggermente anche il testo dei risultati */
     color: #333;
 }
 
@@ -192,4 +209,5 @@ body {
 .btn-send:active {
     transform: scale(0.98);
     background: #218838;
+
 }
