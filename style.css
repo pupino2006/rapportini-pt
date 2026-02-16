@@ -213,22 +213,35 @@ body {
 }
 
 .item-ricerca {
-    display: flex;         /* Allinea immagine e testo sulla stessa riga */
+    display: flex;
     align-items: center;
-    gap: 15px;             /* Spazio tra immagine e testo */
     padding: 12px;
+    gap: 15px; /* Spazio tra foto e testo */
+    border-bottom: 1px solid #eee;
 }
 
 .img-articolo {
-    width: 50px;           /* Dimensione fissa */
-    height: 50px;
-    object-fit: cover;     /* Evita che l'immagine si deformi */
-    border-radius: 8px;    /* Angoli leggermente arrotondati */
-    background: #eee;      /* Colore di sfondo se l'immagine manca */
+    width: 60px;  /* Leggermente più grande per visibilità */
+    height: 60px;
+    object-fit: cover; /* Taglia l'immagine senza deformarla */
+    border-radius: 6px;
+    background-color: #f9f9f9;
     border: 1px solid #ddd;
+    flex-shrink: 0; /* Impedisce alla foto di rimpicciolirsi se il testo è lungo */
 }
 
 .info-articolo {
     display: flex;
-    flex-direction: column; /* Nome sopra, codice o prezzo sotto */
+    flex-direction: column;
+}
+
+.nome-articolo {
+    font-weight: bold;
+    font-size: 1rem;
+    color: #333;
+}
+
+.codice-articolo {
+    font-size: 0.85rem;
+    color: #777;
 }
