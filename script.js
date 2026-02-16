@@ -250,3 +250,76 @@ async function generaEInviaPDF() {
         alert("❌ Errore: " + err.message);
     }
 }
+
+async function generaAnteprimaPDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Recupero dati dai campi
+        const operatore = document.getElementById('operatore').value || "NON SPECIFICATO";
+        const zona = document.getElementById('zona').value || "NON SPECIFICATA";
+        const dataInt = document.getElementById('dataIntervento').value || "";
+        const descrizione = document.getElementById('descrizioneIntervento').value || "";
+
+        // --- COSTRUZIONE PDF (Stessa logica dell'invio) ---
+        const imgLogo = document.querySelector('.header-logo img');
+        if (imgLogo) {
+            try { doc.addImage(imgLogo, 'PNG', 10, 10, 50, 18); } catch(e) {}
+        }
+        
+        doc.setFontSize(18);
+        doc.setTextColor(0, 74, 153);
+        doc.text("ANTEPRIMA RAPPORTO", 70, 22);
+        
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Operatore: ${operatore}`, 10, 45);
+        doc.text(`Zona: ${zona}`, 10, 52);
+        doc.text(`Data: ${dataInt}`, 10, 59);
+
+        // Descrizione
+        doc.setFont("helvetica", "bold");
+        doc.text("Descrizione Intervento:", 10, 70);
+        doc.setFont("helvetica", "normal");
+        const splitDesc = doc.splitTextToSize(descrizione, 180);
+        doc.text(splitDesc, 10, 77);
+        
+        let currentY = 77 + (splitDesc.length * 7);
+
+        // Materiali
+        doc.setFont("helvetica", "bold");
+        doc.text("Materiali utilizzati:", 10, currentY + 10);
+        doc.setFont("helvetica", "normal");
+        let y = currentY + 17;
+        carrello.forEach((item) => {
+            doc.text(`- [${item.qta}] ${item.cod}: ${item.desc}`, 15, y);
+            y += 8;
+        });
+
+        // Firma
+        if (!signaturePad.isEmpty()) {
+            const firmaData = signaturePad.toDataURL();
+            doc.text("Firma Cliente (Anteprima):", 10, y + 10);
+            doc.addImage(firmaData, 'PNG', 10, y + 15, 40, 15);
+        }
+
+        // Foto (Solo la prima per l'anteprima, per velocità)
+        const fotoFiles = document.getElementById('fotoInput').files;
+        if (fotoFiles.length > 0) {
+            doc.addPage();
+            doc.text("ALLEGATI FOTOGRAFICI (ANTEPRIMA)", 10, 20);
+            const imgData = await readFileAsDataURL(fotoFiles[0]);
+            doc.addImage(imgData, 'JPEG', 10, 30, 90, 65);
+            doc.text("(Solo la prima foto mostrata in anteprima)", 10, 100);
+        }
+
+        // --- APERTURA ANTEPRIMA ---
+        // Apre il PDF in una nuova finestra/scheda
+        window.open(doc.output('bloburl'), '_blank');
+
+    } catch (err) {
+        console.error(err);
+        alert("Errore generazione anteprima: " + err.message);
+    }
+}
