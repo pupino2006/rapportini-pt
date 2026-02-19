@@ -50,16 +50,14 @@ async function searchInDanea() {
     let query = input.value.trim();
     let divRisultati = document.getElementById('risultatiRicerca');
     
-    // Se la query è troppo corta, pulisci i risultati e ferma la funzione
     if (query.length < 2) { 
         divRisultati.innerHTML = ""; 
         return; 
     }
 
-    // Cerchiamo nella tabella 'articoli' (il tuo magazzino)
     const { data, error } = await supabaseClient
         .from('articoli')
-        .select('"Cod.", "Descrizione", "Immagine"') // Prendiamo anche la colonna Immagine
+        .select('"Cod.", "Descrizione", "Immagine"')
         .or(`"Cod.".ilike.%${query}%,"Descrizione".ilike.%${query}%`)
         .limit(10);
 
@@ -73,11 +71,8 @@ async function searchInDanea() {
     data.forEach(art => {
         let p = document.createElement('div');
         p.className = "item-ricerca";
-        
-        // Se la colonna 'Immagine' è vuota, usiamo un'icona di default
         let imgUrl = art["Immagine"] ? art["Immagine"] : 'https://via.placeholder.com/50?text=No+Img';
 
-        // Costruiamo la riga del risultato con l'anteprima
         p.innerHTML = `
             <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
                 <img src="${imgUrl}" style="width:50px; height:50px; object-fit:cover; border-radius:5px; margin-right:15px; border: 1px solid #ddd;">
@@ -89,7 +84,6 @@ async function searchInDanea() {
         `;
         
         p.onclick = () => {
-            // Aggiungiamo al carrello dei materiali
             carrello.push({ cod: art["Cod."], desc: art["Descrizione"], qta: 1 });
             aggiornaCarrelloUI();
             divRisultati.innerHTML = "";
@@ -121,9 +115,9 @@ function readFileAsDataURL(file) {
     });
 }
 
-// --- MODIFICA: GENERAZIONE PDF CON DESCRIZIONE INTERVENTO ---
+// --- GENERAZIONE E INVIO (VERSIONE SUPABASE) ---
 async function generaEInviaPDF() {
-    console.log("Inizio procedura...");
+    console.log("Inizio procedura Cloud...");
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -131,17 +125,17 @@ async function generaEInviaPDF() {
         const operatore = document.getElementById('operatore').value;
         const zona = document.getElementById('zona').value;
         const dataInt = document.getElementById('dataIntervento').value;
-        const descrizione = document.getElementById('descrizioneIntervento').value; // Recupero descrizione
+        const descrizione = document.getElementById('descrizioneIntervento').value;
 
         if (!operatore || !zona) {
             alert("⚠️ Inserisci Operatore e Zona!");
             return;
         }
 
-        // --- PDF: INTESTAZIONE ---
+        // --- COSTRUZIONE PDF ---
         const imgLogo = document.querySelector('.header-logo img');
         if (imgLogo) {
-            try { doc.addImage(imgLogo, 'PNG', 10, 10, 50, 18); } catch(e) { console.log("Logo non caricato"); }
+            try { doc.addImage(imgLogo, 'PNG', 10, 10, 50, 18); } catch(e) { console.log("Logo skip"); }
         }
         
         doc.setFontSize(18);
@@ -154,16 +148,14 @@ async function generaEInviaPDF() {
         doc.text(`Zona: ${zona}`, 10, 52);
         doc.text(`Data: ${dataInt}`, 10, 59);
 
-        // --- SEZIONE DESCRIZIONE INTERVENTO ---
         doc.setFont("helvetica", "bold");
         doc.text("Descrizione Intervento:", 10, 70);
         doc.setFont("helvetica", "normal");
-        const splitDesc = doc.splitTextToSize(descrizione, 180); // Manda a capo il testo lungo
+        const splitDesc = doc.splitTextToSize(descrizione, 180);
         doc.text(splitDesc, 10, 77);
         
         let currentY = 77 + (splitDesc.length * 7);
 
-        // --- PDF: MATERIALI ---
         doc.setFont("helvetica", "bold");
         doc.text("Materiali utilizzati:", 10, currentY + 10);
         doc.setFont("helvetica", "normal");
@@ -173,7 +165,6 @@ async function generaEInviaPDF() {
             y += 8;
         });
 
-        // --- PDF: FIRMA ---
         let firmaData = "";
         if (!signaturePad.isEmpty()) {
             firmaData = signaturePad.toDataURL();
@@ -182,7 +173,6 @@ async function generaEInviaPDF() {
             y += 35;
         }
 
-        // --- PDF: FOTO ---
         const fotoFiles = document.getElementById('fotoInput').files;
         if (fotoFiles.length > 0) {
             doc.addPage();
@@ -199,55 +189,63 @@ async function generaEInviaPDF() {
             }
         }
 
-        const pdfBase64 = doc.output('datauristring');
+        // 1. TRASFORMA PDF IN BLOB PER UPLOAD
+        const pdfBlob = doc.output('blob');
+        const fileName = `${Date.now()}_Rapporto_${zona.replace(/\s+/g, '_')}.pdf`;
 
-        // --- SALVATAGGIO SUPABASE (con colonna descrizione) ---
+        // 2. UPLOAD SU SUPABASE STORAGE (Richiede bucket 'rapportini-pdf' pubblico)
+        const { data: storageData, error: storageError } = await supabaseClient
+            .storage
+            .from('rapportini-pdf')
+            .upload(fileName, pdfBlob);
+
+        if (storageError) throw new Error("Errore Upload Storage: " + storageError.message);
+
+        // 3. OTTIENI URL PUBBLICO
+        const { data: urlData } = supabaseClient.storage.from('rapportini-pdf').getPublicUrl(fileName);
+        const pdfUrl = urlData.publicUrl;
+
+        // 4. SALVA NEL DATABASE
         const { error: dbError } = await supabaseClient
             .from('rapportini')
             .insert([{
                 operatore: operatore,
                 zona: zona,
                 data: dataInt,
-                descrizione: descrizione, // Assicurati che la colonna esista su Supabase
+                descrizione: descrizione,
                 materiali: carrello,
-                firma: firmaData
+                firma: firmaData,
+                pdf_url: pdfUrl // <--- Nuova colonna
             }]);
 
         if (dbError) throw dbError;
 
-        // --- INVIO RESEND ---
-        const emailRes = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer re_9vyoQUPF_AGCtEg6ALeFDzcyavtiKz4iq'
-            },
-            body: JSON.stringify({
-                from: 'Rapportini <invio@pannellitermici.it>',
-                to: ['l.damario@pannellitermici.it'],
-                cc: ['l.ripa@pannellitermici.it'],
-                subject: `Rapporto ${dataInt} - ${operatore} (${zona})`,
-                html: `
-                    <p>Intervento eseguito da <b>${operatore}</b> a <b>${zona}</b>.</p>
-                    <p><b>Descrizione:</b> ${descrizione}</p>
-                `,
-                attachments: [{
-                    filename: `Rapporto_${zona}.pdf`,
-                    content: pdfBase64.split(',')[1]
-                }]
-            })
+        // 5. INVOCA EDGE FUNCTION PER INVIO EMAIL
+        // Invieremo i dati alla funzione che userà Resend lato server
+        const { data: funcData, error: funcError } = await supabaseClient.functions.invoke('send-email-rapportino', {
+            body: { 
+                operatore, 
+                zona, 
+                dataInt, 
+                descrizione, 
+                pdfUrl,
+                fileName
+            }
         });
 
-        if (emailRes.ok) {
-            alert("✅ Rapporto inviato e salvato!");
-            doc.save(`Rapporto_${zona}.pdf`);
+        if (funcError) {
+            console.error("Errore funzione:", funcError);
+            alert("✅ Rapporto salvato nel cloud, ma l'invio email automatico è in coda o ha avuto un intoppo.");
         } else {
-            alert("⚠️ Salvato nel Cloud, ma errore invio Email.");
+            alert("🚀 Rapporto salvato e inviato correttamente!");
         }
+
+        // Scarica comunque una copia locale per sicurezza
+        doc.save(fileName);
 
     } catch (err) {
         console.error(err);
-        alert("❌ Errore: " + err.message);
+        alert("❌ Errore critico: " + err.message);
     }
 }
 
@@ -255,14 +253,11 @@ async function generaAnteprimaPDF() {
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        
-        // Recupero dati dai campi
         const operatore = document.getElementById('operatore').value || "NON SPECIFICATO";
         const zona = document.getElementById('zona').value || "NON SPECIFICATA";
         const dataInt = document.getElementById('dataIntervento').value || "";
         const descrizione = document.getElementById('descrizioneIntervento').value || "";
 
-        // --- COSTRUZIONE PDF (Stessa logica dell'invio) ---
         const imgLogo = document.querySelector('.header-logo img');
         if (imgLogo) {
             try { doc.addImage(imgLogo, 'PNG', 10, 10, 50, 18); } catch(e) {}
@@ -273,12 +268,10 @@ async function generaAnteprimaPDF() {
         doc.text("ANTEPRIMA RAPPORTO", 70, 22);
         
         doc.setFontSize(11);
-        doc.setTextColor(0, 0, 0);
         doc.text(`Operatore: ${operatore}`, 10, 45);
         doc.text(`Zona: ${zona}`, 10, 52);
         doc.text(`Data: ${dataInt}`, 10, 59);
 
-        // Descrizione
         doc.setFont("helvetica", "bold");
         doc.text("Descrizione Intervento:", 10, 70);
         doc.setFont("helvetica", "normal");
@@ -287,7 +280,6 @@ async function generaAnteprimaPDF() {
         
         let currentY = 77 + (splitDesc.length * 7);
 
-        // Materiali
         doc.setFont("helvetica", "bold");
         doc.text("Materiali utilizzati:", 10, currentY + 10);
         doc.setFont("helvetica", "normal");
@@ -297,29 +289,15 @@ async function generaAnteprimaPDF() {
             y += 8;
         });
 
-        // Firma
         if (!signaturePad.isEmpty()) {
             const firmaData = signaturePad.toDataURL();
             doc.text("Firma Cliente (Anteprima):", 10, y + 10);
             doc.addImage(firmaData, 'PNG', 10, y + 15, 40, 15);
         }
 
-        // Foto (Solo la prima per l'anteprima, per velocità)
-        const fotoFiles = document.getElementById('fotoInput').files;
-        if (fotoFiles.length > 0) {
-            doc.addPage();
-            doc.text("ALLEGATI FOTOGRAFICI (ANTEPRIMA)", 10, 20);
-            const imgData = await readFileAsDataURL(fotoFiles[0]);
-            doc.addImage(imgData, 'JPEG', 10, 30, 90, 65);
-            doc.text("(Solo la prima foto mostrata in anteprima)", 10, 100);
-        }
-
-        // --- APERTURA ANTEPRIMA ---
-        // Apre il PDF in una nuova finestra/scheda
         window.open(doc.output('bloburl'), '_blank');
-
     } catch (err) {
         console.error(err);
-        alert("Errore generazione anteprima: " + err.message);
+        alert("Errore anteprima: " + err.message);
     }
 }
