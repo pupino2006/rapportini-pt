@@ -57,38 +57,42 @@ async function caricaStorico() {
     const lista = document.getElementById('lista-rapportini');
     document.getElementById('tab-storico').style.display = 'block';
     
-    lista.innerHTML = "<p style='text-align:center;'>Caricamento dati...</p>";
+    lista.innerHTML = "<p style='text-align:center;'>Caricamento in corso...</p>";
 
     try {
         const { data, error } = await supabaseClient
             .from('rapportini')
             .select('*')
-            .order('data', { ascending: false }); // Ordina per data intervento
+            .order('data', { ascending: false }); // <--- CORRETTO: Usiamo 'data' invece di 'created_at'
 
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            lista.innerHTML = "<p style='text-align:center;'>Nessun rapporto presente.</p>";
+            lista.innerHTML = "<p style='text-align:center; padding: 20px;'>Nessun rapporto trovato in archivio.</p>";
             return;
         }
 
         lista.innerHTML = data.map(rap => `
             <div class="card-rapportino" style="border-left: 6px solid ${rap.completato ? '#27ae60' : '#f39c12'}; margin-bottom:15px; background:white; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom:10px;">
-                    <strong style="font-size:1.1rem;">${rap.zona || 'Zona N.D.'}</strong>
-                    <input type="checkbox" title="Segna come completato" style="transform: scale(1.3);" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato(${rap.id}, this.checked)">
+                    <strong style="font-size:1.1rem;">${rap.zona || 'Senza Zona'}</strong>
+                    <input type="checkbox" style="transform: scale(1.3);" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato(${rap.id}, this.checked)">
                 </div>
                 <div style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">
                     📅 ${rap.data} | 👷 ${rap.operatore || 'N.D.'}
                 </div>
+                <div style="font-size: 0.9rem; margin-bottom: 10px; color: #333;">
+                    ${rap.descrizione ? rap.descrizione.substring(0, 50) + '...' : 'Nessuna descrizione'}
+                </div>
                 <div class="azioni-storico" style="display: flex; gap: 8px;">
-                    ${rap.pdf_url ? `<button onclick="window.open('${rap.pdf_url}', '_blank')" style="flex:1; padding:8px; background:#004a99; color:white; border:none; border-radius:4px; cursor:pointer;">👁️ Vedi PDF</button>` : ''}
+                    ${rap.pdf_url ? `<button onclick="window.open('${rap.pdf_url}', '_blank')" style="flex:1; padding:8px; background:#004a99; color:white; border:none; border-radius:4px; cursor:pointer;">👁️ PDF</button>` : ''}
                     <button onclick="eliminaRapporto(${rap.id})" style="padding:8px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer;">🗑️</button>
                 </div>
             </div>
         `).join('');
     } catch (err) {
-        lista.innerHTML = `<p style="color:red; text-align:center;">Errore caricamento: ${err.message}</p>`;
+        console.error("Errore completo:", err);
+        lista.innerHTML = `<p style="color:red; text-align:center; padding:20px;">Errore caricamento: ${err.message}</p>`;
     }
 }
 
@@ -192,3 +196,4 @@ function resizeCanvas() {
 }
 
 window.addEventListener("resize", resizeCanvas);
+
