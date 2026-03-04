@@ -11,34 +11,34 @@
 </head>
 <body>
 
-    <div id="home-screen" class="tab-content active">
-        <div style="text-align: center; padding: 40px 20px;">
-            <img src="logoapp.png" style="width: 150px; margin-bottom: 30px;">
-            <h2 style="color: #004a99;">Gestione Interventi</h2>
-            <button onclick="mostraApp(); openTab(null, 'tab1')" class="btn-main-menu">➕ NUOVO RAPPORTO</button>
-            <button onclick="caricaStorico(); openTab(null, 'tab-storico')" class="btn-main-menu" style="background: #6c757d;">📂 STORICO RAPPORTI</button>
-        </div>
+<div id="home-screen" class="tab-content active">
+    <div style="text-align: center; padding: 40px 20px;">
+        <img src="logoapp.png" style="width: 150px; margin-bottom: 30px;">
+        <h2 style="color: #004a99;">Gestione Interventi</h2>
+        <button onclick="mostraApp()" class="btn-main-menu">➕ NUOVO RAPPORTO</button>
+        <button onclick="caricaStorico()" class="btn-main-menu" style="background: #6c757d;">📂 STORICO RAPPORTI</button>
     </div>
+</div>
 
-    <div id="tab-storico" class="tab-content">
-        <div style="padding: 20px;">
-            <button onclick="tornaAllaHome()" class="btn-back">🏠 Torna alla Home</button>
-            <h3 style="color:#004a99;">Storico Rapportini</h3>
-            <div id="lista-rapportini"></div>
-        </div>
+<div id="tab-storico" class="tab-content" style="display:none;">
+    <div style="padding: 20px;">
+        <button onclick="tornaAllaHome()" class="btn-back">🏠 Torna alla Home</button>
+        <h3 style="color:#004a99;">Storico Rapportini</h3>
+        <div id="lista-rapportini"></div>
     </div>
+</div>
 
-    <div id="app-interface" style="display:none;">
-        <div class="header-logo">
-            <button onclick="tornaAllaHome()" class="btn-home-icon">🏠</button>
-            <img src="logo lungo.png" alt="Logo">
-        </div>
-
-        <nav id="app-nav" class="tabs">
-            <button class="tab-btn active" onclick="openTab(event, 'tab1')">📋 DATI</button>
-            <button class="tab-btn" onclick="openTab(event, 'tab2')">📦 MAT.</button>
-            <button class="tab-btn" onclick="openTab(event, 'tab3')">✍️ FIRMA</button>
-        </nav>
+<div id="app-interface" style="display:none;">
+    <div class="header-logo">
+        <button onclick="tornaAllaHome()" class="btn-home-icon">🏠</button>
+        <img src="logo lungo.png" alt="Logo">
+    </div>
+    <nav id="app-nav" class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'tab1')">📋 DATI</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab2')">📦 MAT.</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab3')">✍️ FIRMA</button>
+    </nav>
+    </div>
 
         <section id="tab1" class="tab-content">
             <div class="input-group">
@@ -79,3 +79,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+
