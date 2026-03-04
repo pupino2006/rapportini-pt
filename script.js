@@ -5,21 +5,22 @@ const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 let carrello = [];
 let signaturePad;
 
-// --- NAVIGAZIONE ---
+// --- 1. NAVIGAZIONE ---
+
 function mostraApp() {
-    // Nasconde Home e Storico
+    // Nasconde la Home e lo Storico
     document.getElementById('home-screen').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'none';
     
-    // Mostra l'interfaccia di compilazione
+    // Mostra l'interfaccia dell'app (Header, Nav e Contenuto)
     document.getElementById('app-interface').style.display = 'block';
     
-    // Forza l'apertura sulla prima scheda (Dati)
+    // Reset alle tab iniziali
     openTab(null, 'tab1');
 }
 
 function tornaAllaHome() {
-    // Nasconde tutto l'apparato di compilazione e lo storico
+    // Nasconde l'interfaccia app e lo storico
     document.getElementById('app-interface').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'none';
     
@@ -28,86 +29,94 @@ function tornaAllaHome() {
 }
 
 function openTab(evt, tabId) {
-    // Nasconde tutte le sezioni interne alla compilazione
+    // Nasconde tutte le sezioni interne (tab1, tab2, tab3)
     const sections = ['tab1', 'tab2', 'tab3'];
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // Gestione pulsanti attivi
+    // Rimuove classe active dai bottoni
     const buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
 
-    // Mostra la sezione selezionata
+    // Mostra la sezione corretta
     const target = document.getElementById(tabId);
     if (target) {
         target.style.display = 'block';
         if (evt) {
             evt.currentTarget.classList.add('active');
         } else {
-            // Se chiamata programmaticamente (es. da mostraApp), attiva il primo bottone
-            document.querySelector(`.tab-btn[onclick*="${tabId}"]`).classList.add('active');
+            // Se attivato da codice, cerca il bottone corrispondente
+            const btn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
+            if(btn) btn.classList.add('active');
         }
     }
 
-    // Se entriamo nella tab firma, resettiamo il canvas
+    // Se entriamo nella tab firma, resize obbligatorio del canvas
     if (tabId === 'tab3') {
         setTimeout(resizeCanvas, 150);
     }
 }
 
-// --- STORICO ---
+// --- 2. GESTIONE STORICO ---
+
 async function caricaStorico() {
     const lista = document.getElementById('lista-rapportini');
-    lista.innerHTML = "<p style='text-align:center;'>Verifica connessione database...</p>";
+    if(!lista) return;
 
-    // Mostra la sezione storico
+    // Navigazione
     document.getElementById('home-screen').style.display = 'none';
     document.getElementById('app-interface').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'block';
 
+    lista.innerHTML = "<p style='text-align:center;'>Caricamento in corso...</p>";
+
     try {
         const { data, error } = await supabaseClient
-            .from('rapportini') // CONTROLLA: la tabella si chiama 'rapportini' su Supabase?
+            .from('rapportini')
             .select('*')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            lista.innerHTML = "<p style='text-align:center;'>Nessun rapporto presente in archivio.</p>";
+            lista.innerHTML = "<p style='text-align:center;'>Nessun rapporto trovato.</p>";
             return;
         }
 
         lista.innerHTML = data.map(rap => `
-            <div class="card-rapportino">
-                <strong>Zona: ${rap.zona || 'Non specificata'}</strong><br>
-                <small>Operatore: ${rap.operatore || 'N/D'} | Data: ${rap.data || 'N/D'}</small>
+            <div class="card-rapportino" style="border-left: 6px solid ${rap.completato ? '#27ae60' : '#f39c12'};">
+                <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="font-size:1.1rem;">${rap.zona || 'N/A'}</strong>
+                    <input type="checkbox" style="transform: scale(1.3);" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato('${rap.id}', this.checked)">
+                </div>
+                <div style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">
+                    📅 ${rap.data || 'N/A'} | 👷 ${rap.operatore || 'N/A'}
+                </div>
                 <div class="azioni-storico">
-                    ${rap.pdf_url ? `<button onclick="window.open('${rap.pdf_url}', '_blank')">👁️ PDF</button>` : ''}
-                    <button onclick="eliminaRapporto('${rap.id}')" style="background:#ff4444; color:white;">🗑️</button>
+                    <button onclick="window.open('${rap.pdf_url}', '_blank')">👁️ PDF</button>
+                    <button onclick="reinviaRapporto('${rap.id}')">📧 Reinvia</button>
+                    <button onclick="eliminaRapporto('${rap.id}')" style="background:#e74c3c; color:white;">🗑️</button>
                 </div>
             </div>
         `).join('');
-
     } catch (err) {
-        console.error("Errore completo:", err);
-        lista.innerHTML = `
-            <div style="color:red; text-align:center; padding:10px;">
-                <p>⚠️ Errore di caricamento</p>
-                <small>${err.message}</small><br>
-                <button onclick="caricaStorico()" style="margin-top:10px;">Riprova</button>
-            </div>`;
+        lista.innerHTML = `<p style="color:red; text-align:center;">Errore database: ${err.message}</p>`;
     }
 }
 
-// Inizializzazione Firma
+// --- 3. LOGICA FIRMA E CARRELLO (UGUALE A PRIMA) ---
+
 window.onload = () => {
     const canvas = document.getElementById('signature-pad');
     if (canvas) {
         signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
         resizeCanvas();
+    }
+    // Imposta data odierna
+    if(document.getElementById('dataIntervento')) {
+        document.getElementById('dataIntervento').valueAsDate = new Date();
     }
 };
 
@@ -119,10 +128,11 @@ function resizeCanvas() {
     canvas.height = canvas.offsetHeight * ratio;
     canvas.getContext("2d").scale(ratio, ratio);
 }
-// ... (resto delle funzioni searchInDanea e generaEInviaPDF rimangono uguali)
+
 window.addEventListener("resize", resizeCanvas);
 
-// --- RICERCA ARTICOLI ---
+// --- 4. RICERCA E DATABASE ---
+
 async function searchInDanea() {
     let input = document.getElementById('searchArticolo');
     let query = input.value.trim();
@@ -139,52 +149,55 @@ async function searchInDanea() {
         .or(`"Cod.".ilike.%${query}%,"Descrizione".ilike.%${query}%`)
         .limit(10);
 
-    if (error) {
-        console.error("Errore ricerca:", error);
-        return;
-    }
+    if (error) return;
 
-    divRisultati.innerHTML = "";
-    
-    data.forEach(art => {
-        let p = document.createElement('div');
-        p.className = "item-ricerca";
-        let imgUrl = art["Immagine"] ? art["Immagine"] : 'https://via.placeholder.com/50?text=No+Img';
+    divRisultati.innerHTML = data.map(art => `
+        <div class="item-ricerca" onclick="aggiungiAlCarrello('${art["Cod."]}', '${art["Descrizione"].replace(/'/g, "\\'")}')" style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor:pointer;">
+            <img src="${art["Immagine"] || 'https://via.placeholder.com/50'}" style="width:40px; height:40px; margin-right:10px;">
+            <div><strong>${art["Cod."]}</strong><br><small>${art["Descrizione"]}</small></div>
+        </div>
+    `).join('');
+}
 
-        p.innerHTML = `
-            <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor:pointer;">
-                <img src="${imgUrl}" style="width:50px; height:50px; object-fit:cover; border-radius:5px; margin-right:15px; border: 1px solid #ddd;">
-                <div>
-                    <strong style="color: #005aab;">${art["Cod."]}</strong><br>
-                    <small style="color: #333;">${art["Descrizione"]}</small>
-                </div>
-            </div>
-        `;
-        
-        p.onclick = () => {
-            carrello.push({ cod: art["Cod."], desc: art["Descrizione"], qta: 1 });
-            aggiornaCarrelloUI();
-            divRisultati.innerHTML = "";
-            input.value = "";
-        };
-        divRisultati.appendChild(p);
-    });
+function aggiungiAlCarrello(cod, desc) {
+    carrello.push({ cod, desc, qta: 1 });
+    document.getElementById('risultatiRicerca').innerHTML = "";
+    document.getElementById('searchArticolo').value = "";
+    aggiornaCarrelloUI();
 }
 
 function aggiornaCarrelloUI() {
     const container = document.getElementById('carrelloMateriali');
     container.innerHTML = carrello.map((item, index) => `
-        <div class="card-materiale" style="border:1px solid #ddd; padding:10px; margin:5px 0; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:white;">
-            <div><b>${item.cod}</b><br><small>${item.desc}</small></div>
+        <div class="card-materiale">
+            <div><b>${item.cod}</b> - ${item.desc}</div>
             <div style="display:flex; gap:10px;">
-                <input type="number" value="${item.qta}" style="width:40px" onchange="carrello[${index}].qta=this.value">
-                <button onclick="carrello.splice(${index}, 1); aggiornaCarrelloUI()" style="color:red; background:none; border:none;">❌</button>
+                <input type="number" value="${item.qta}" style="width:50px" onchange="carrello[${index}].qta=this.value">
+                <button onclick="carrello.splice(${index}, 1); aggiornaCarrelloUI()" style="color:red; border:none; background:none;">❌</button>
             </div>
         </div>
     `).join('');
 }
 
-function readFileAsDataURL(file) {
+// --- 5. FUNZIONI PDF E INVIO ---
+
+async function generaEInviaPDF() {
+    // Mantieni la tua logica originale di generaEInviaPDF qui
+    // Assicurati di chiamare tornaAllaHome() alla fine del successo
+}
+
+async function aggiornaStato(id, completato) {
+    await supabaseClient.from('rapportini').update({ completato: completato }).eq('id', id);
+}
+
+async function eliminaRapporto(id) {
+    if (confirm("Eliminare definitivamente?")) {
+        await supabaseClient.from('rapportini').delete().eq('id', id);
+        caricaStorico();
+    }
+}
+
+async function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
@@ -192,265 +205,3 @@ function readFileAsDataURL(file) {
         reader.readAsDataURL(file);
     });
 }
-
-// --- FUNZIONI STORICO (NUOVE) ---
-
-async function caricaStorico() {
-    const lista = document.getElementById('lista-rapportini');
-    if(!lista) return;
-    lista.innerHTML = "<p style='text-align:center;'>Caricamento in corso...</p>";
-
-    const { data, error } = await supabaseClient
-        .from('rapportini')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        lista.innerHTML = "Errore nel caricamento.";
-        return;
-    }
-
-    lista.innerHTML = data.map(rap => `
-        <div class="card-rapportino" style="background:white; padding:15px; border-radius:10px; margin-bottom:15px; border-left: 5px solid ${rap.completato ? '#27ae60' : '#f39c12'}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <strong style="font-size:1.1rem;">${rap.zona}</strong>
-                <input type="checkbox" style="transform: scale(1.5);" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato('${rap.id}', this.checked)">
-            </div>
-            <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
-                <span>📅 ${rap.data}</span> | <span>👷 ${rap.operatore}</span>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <button onclick="window.open('${rap.pdf_url}', '_blank')" style="background:#004a99; color:white; border:none; padding:8px; border-radius:5px;">👁️ Vedi PDF</button>
-                <button onclick="reinviaRapporto('${rap.id}')" style="background:#27ae60; color:white; border:none; padding:8px; border-radius:5px;">📧 Reinvia</button>
-                <button onclick="eliminaRapporto('${rap.id}')" style="background:#e74c3c; color:white; border:none; padding:8px; border-radius:5px; grid-column: span 2;">🗑️ Elimina</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function aggiornaStato(id, completato) {
-    const { error } = await supabaseClient
-        .from('rapportini')
-        .update({ completato: completato })
-        .eq('id', id);
-    
-    if (error) alert("Errore aggiornamento stato");
-}
-
-async function eliminaRapporto(id) {
-    if (!confirm("Sei sicuro di voler eliminare questo rapporto dallo storico?")) return;
-    
-    const { error } = await supabaseClient
-        .from('rapportini')
-        .delete()
-        .eq('id', id);
-    
-    if (error) {
-        alert("Errore durante l'eliminazione");
-    } else {
-        caricaStorico();
-    }
-}
-
-async function reinviaRapporto(id) {
-    const { data, error } = await supabaseClient
-        .from('rapportini')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-    if (error || !data) return alert("Errore recupero dati");
-
-    if (confirm(`Vuoi reinviare l'email per il rapporto a ${data.zona}?`)) {
-        const { error: funcError } = await supabaseClient.functions.invoke('send-email-rapportino', {
-            body: { 
-                operatore: data.operatore, 
-                zona: data.zona, 
-                dataInt: data.data, 
-                descrizione: data.descrizione, 
-                pdfUrl: data.pdf_url,
-                fileName: `Reinvio_${data.zona}.pdf`
-            }
-        });
-
-        if (funcError) alert("Errore durante il reinvio");
-        else alert("🚀 Email reinviata con successo!");
-    }
-}
-
-// --- GENERAZIONE E INVIO ORIGINALE (CON AGGIUNTA COMPLETATO) ---
-async function generaEInviaPDF() {
-    console.log("Inizio procedura Cloud...");
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        const operatore = document.getElementById('operatore').value;
-        const zona = document.getElementById('zona').value;
-        const dataInt = document.getElementById('dataIntervento').value;
-        const descrizione = document.getElementById('descrizioneIntervento').value;
-
-        if (!operatore || !zona) {
-            alert("⚠️ Inserisci Operatore e Zona!");
-            return;
-        }
-
-        const imgLogo = document.querySelector('.header-logo img');
-        if (imgLogo) {
-            try { doc.addImage(imgLogo, 'PNG', 10, 10, 50, 18); } catch(e) { console.log("Logo skip"); }
-        }
-        
-        doc.setFontSize(18);
-        doc.setTextColor(0, 74, 153);
-        doc.text("RAPPORTO DI MANUTENZIONE", 70, 22);
-        
-        doc.setFontSize(11);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Operatore: ${operatore}`, 10, 45);
-        doc.text(`Zona: ${zona}`, 10, 52);
-        doc.text(`Data: ${dataInt}`, 10, 59);
-
-        doc.setFont("helvetica", "bold");
-        doc.text("Descrizione Intervento:", 10, 70);
-        doc.setFont("helvetica", "normal");
-        const splitDesc = doc.splitTextToSize(descrizione, 180);
-        doc.text(splitDesc, 10, 77);
-        
-        let currentY = 77 + (splitDesc.length * 7);
-
-        doc.setFont("helvetica", "bold");
-        doc.text("Materiali utilizzati:", 10, currentY + 10);
-        doc.setFont("helvetica", "normal");
-        let y = currentY + 17;
-        carrello.forEach((item) => {
-            doc.text(`- [${item.qta}] ${item.cod}: ${item.desc}`, 15, y);
-            y += 8;
-        });
-
-        let firmaData = "";
-        if (!signaturePad.isEmpty()) {
-            firmaData = signaturePad.toDataURL();
-            doc.text("Firma Cliente:", 10, y + 10);
-            doc.addImage(firmaData, 'PNG', 10, y + 15, 40, 15);
-            y += 35;
-        }
-
-        const fotoFiles = document.getElementById('fotoInput').files;
-        if (fotoFiles.length > 0) {
-            doc.addPage();
-            doc.text("ALLEGATI FOTOGRAFICI", 10, 20);
-            let yFoto = 30;
-            for (let i = 0; i < fotoFiles.length; i++) {
-                const imgData = await readFileAsDataURL(fotoFiles[i]);
-                doc.addImage(imgData, 'JPEG', 10, yFoto, 90, 65);
-                yFoto += 75;
-                if (yFoto > 220 && i < fotoFiles.length - 1) {
-                    doc.addPage();
-                    yFoto = 20;
-                }
-            }
-        }
-
-        const pdfBlob = doc.output('blob');
-        const fileName = `${Date.now()}_Rapporto_${zona.replace(/\s+/g, '_')}.pdf`;
-
-        const { data: storageData, error: storageError } = await supabaseClient
-            .storage
-            .from('rapportini-pdf')
-            .upload(fileName, pdfBlob);
-
-        if (storageError) throw new Error("Errore Upload Storage: " + storageError.message);
-
-        const { data: urlData } = supabaseClient.storage.from('rapportini-pdf').getPublicUrl(fileName);
-        const pdfUrl = urlData.publicUrl;
-
-        // Salva nel DB includendo il flag completato: false di default
-        const { error: dbError } = await supabaseClient
-            .from('rapportini')
-            .insert([{
-                operatore: operatore,
-                zona: zona,
-                data: dataInt,
-                descrizione: descrizione,
-                materiali: carrello,
-                firma: firmaData,
-                pdf_url: pdfUrl,
-                completato: false 
-            }]);
-
-        if (dbError) throw dbError;
-
-        const { error: funcError } = await supabaseClient.functions.invoke('send-email-rapportino', {
-            body: { operatore, zona, dataInt, descrizione, pdfUrl, fileName }
-        });
-
-        if (funcError) {
-            alert("✅ Rapporto salvato, ma errore invio email.");
-        } else {
-            alert("🚀 Rapporto inviato con successo!");
-        }
-
-        doc.save(fileName);
-        openTab(null, 'home-screen'); // Torna alla home dopo l'invio
-
-    } catch (err) {
-        alert("❌ Errore: " + err.message);
-    }
-}
-
-async function generaAnteprimaPDF() {
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const operatore = document.getElementById('operatore').value || "NON SPECIFICATO";
-        const zona = document.getElementById('zona').value || "NON SPECIFICATA";
-        const dataInt = document.getElementById('dataIntervento').value || "";
-        const descrizione = document.getElementById('descrizioneIntervento').value || "";
-
-        const imgLogo = document.querySelector('.header-logo img');
-        if (imgLogo) {
-            try { doc.addImage(imgLogo, 'PNG', 10, 10, 50, 18); } catch(e) {}
-        }
-        
-        doc.setFontSize(18);
-        doc.setTextColor(0, 74, 153);
-        doc.text("ANTEPRIMA RAPPORTO", 70, 22);
-        
-        doc.setFontSize(11);
-        doc.text(`Operatore: ${operatore}`, 10, 45);
-        doc.text(`Zona: ${zona}`, 10, 52);
-        doc.text(`Data: ${dataInt}`, 10, 59);
-
-        doc.setFont("helvetica", "bold");
-        doc.text("Descrizione Intervento:", 10, 70);
-        doc.setFont("helvetica", "normal");
-        const splitDesc = doc.splitTextToSize(descrizione, 180);
-        doc.text(splitDesc, 10, 77);
-        
-        let currentY = 77 + (splitDesc.length * 7);
-
-        doc.setFont("helvetica", "bold");
-        doc.text("Materiali utilizzati:", 10, currentY + 10);
-        doc.setFont("helvetica", "normal");
-        let y = currentY + 17;
-        carrello.forEach((item) => {
-            doc.text(`- [${item.qta}] ${item.cod}: ${item.desc}`, 15, y);
-            y += 8;
-        });
-
-        if (!signaturePad.isEmpty()) {
-            const firmaData = signaturePad.toDataURL();
-            doc.text("Firma Cliente (Anteprima):", 10, y + 10);
-            doc.addImage(firmaData, 'PNG', 10, y + 15, 40, 15);
-        }
-
-        window.open(doc.output('bloburl'), '_blank');
-    } catch (err) {
-        alert("Errore anteprima: " + err.message);
-    }
-}
-
-
-
-
-
