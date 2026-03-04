@@ -6,30 +6,57 @@ let carrello = [];
 let signaturePad;
 
 // --- NAVIGAZIONE ---
-function openTab(evt, tabId) {
-    const contents = document.querySelectorAll('.tab-content');
-    contents.forEach(tab => tab.style.display = 'none');
-    
-    const buttons = document.querySelectorAll('.tab-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    
-    document.getElementById(tabId).style.display = 'block';
-    if(evt) evt.currentTarget.classList.add('active');
-
-    if (tabId === 'tab3') setTimeout(resizeCanvas, 100);
-}
+// --- FUNZIONI DI NAVIGAZIONE (SOSTITUISCI QUESTE) ---
 
 function mostraApp() {
+    // Nasconde Home e Storico
     document.getElementById('home-screen').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'none';
+    
+    // Mostra l'interfaccia di compilazione
     document.getElementById('app-interface').style.display = 'block';
+    
+    // Forza l'apertura sulla prima scheda (Dati)
+    openTab(null, 'tab1');
 }
 
 function tornaAllaHome() {
+    // Nasconde tutto l'apparato di compilazione e lo storico
     document.getElementById('app-interface').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'none';
+    
+    // Mostra la Home
     document.getElementById('home-screen').style.display = 'block';
-    // Reset campi se necessario qui
+}
+
+function openTab(evt, tabId) {
+    // Nasconde tutte le sezioni interne alla compilazione
+    const sections = ['tab1', 'tab2', 'tab3'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Gestione pulsanti attivi
+    const buttons = document.querySelectorAll('.tab-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+
+    // Mostra la sezione selezionata
+    const target = document.getElementById(tabId);
+    if (target) {
+        target.style.display = 'block';
+        if (evt) {
+            evt.currentTarget.classList.add('active');
+        } else {
+            // Se chiamata programmaticamente (es. da mostraApp), attiva il primo bottone
+            document.querySelector(`.tab-btn[onclick*="${tabId}"]`).classList.add('active');
+        }
+    }
+
+    // Se entriamo nella tab firma, resettiamo il canvas
+    if (tabId === 'tab3') {
+        setTimeout(resizeCanvas, 150);
+    }
 }
 
 // --- STORICO ---
@@ -470,5 +497,6 @@ async function generaAnteprimaPDF() {
         alert("Errore anteprima: " + err.message);
     }
 }
+
 
 
