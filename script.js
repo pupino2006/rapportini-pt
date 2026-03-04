@@ -6,8 +6,6 @@ let carrello = [];
 let signaturePad;
 
 // --- NAVIGAZIONE ---
-// --- FUNZIONI DI NAVIGAZIONE (SOSTITUISCI QUESTE) ---
-
 function mostraApp() {
     // Nasconde Home e Storico
     document.getElementById('home-screen').style.display = 'none';
@@ -123,71 +121,7 @@ function resizeCanvas() {
 }
 // ... (resto delle funzioni searchInDanea e generaEInviaPDF rimangono uguali)
 window.addEventListener("resize", resizeCanvas);
-// Funzione per tornare alla Home (da aggiungere/aggiornare)
-function tornaAllaHome() {
-    // Nasconde tutte le sezioni
-    const contents = document.querySelectorAll('.tab-content');
-    contents.forEach(tab => {
-        tab.style.display = 'none';
-        tab.classList.remove('active');
-    });
 
-    // Mostra solo la Home
-    const home = document.getElementById('home-screen');
-    if (home) {
-        home.style.display = 'block';
-        home.classList.add('active');
-    }
-
-    // Nasconde l'interfaccia di compilazione (Header e Nav)
-    document.getElementById('app-header').style.display = 'none';
-    document.getElementById('app-nav').style.display = 'none';
-}
-
-// Funzione per mostrare l'interfaccia di compilazione
-function mostraApp() {
-    document.getElementById('app-header').style.display = 'block';
-    document.getElementById('app-nav').style.display = 'grid';
-}
-
-// Funzione Carica Storico (Verifica i nomi delle colonne)
-async function caricaStorico() {
-    const lista = document.getElementById('lista-rapportini');
-    if(!lista) return;
-    lista.innerHTML = "<p style='text-align:center;'>Caricamento in corso...</p>";
-
-    // NOTA: Assicurati che 'rapportini' sia il nome esatto della tabella su Supabase
-    const { data, error } = await supabaseClient
-        .from('rapportini')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error("Errore Supabase:", error);
-        lista.innerHTML = `<p style="color:red; text-align:center;">Errore: ${error.message}</p>`;
-        return;
-    }
-
-    if (data.length === 0) {
-        lista.innerHTML = "<p style='text-align:center;'>Nessun rapporto trovato.</p>";
-        return;
-    }
-
-    lista.innerHTML = data.map(rap => `
-        <div class="card-rapportino" style="border-left: 6px solid ${rap.completato ? '#27ae60' : '#f39c12'};">
-            <div style="display:flex; justify-content: space-between; align-items: center;">
-                <strong>${rap.zona || 'N/A'}</strong>
-                <input type="checkbox" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato('${rap.id}', this.checked)">
-            </div>
-            <p><small>📅 ${rap.data} | 👷 ${rap.operatore}</small></p>
-            <div class="azioni-storico">
-                <button onclick="window.open('${rap.pdf_url}', '_blank')">👁️ PDF</button>
-                <button onclick="reinviaRapporto('${rap.id}')">📧 Reinvia</button>
-                <button onclick="eliminaRapporto('${rap.id}')" style="background:#e74c3c; color:white;">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
 // --- RICERCA ARTICOLI ---
 async function searchInDanea() {
     let input = document.getElementById('searchArticolo');
@@ -515,6 +449,7 @@ async function generaAnteprimaPDF() {
         alert("Errore anteprima: " + err.message);
     }
 }
+
 
 
 
