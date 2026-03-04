@@ -5,16 +5,30 @@ const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 let carrello = [];
 let signaturePad;
 
+// --- GESTIONE TAB E NAVIGAZIONE ---
 function openTab(evt, tabId) {
     const contents = document.querySelectorAll('.tab-content');
     contents.forEach(tab => tab.style.display = 'none');
+    
     const buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
-    document.getElementById(tabId).style.display = 'block';
-    if(evt) evt.currentTarget.classList.add('active');
+    
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) {
+        targetTab.style.display = 'block';
+    }
+    
+    if(evt && evt.currentTarget.classList.contains('tab-btn')) {
+        evt.currentTarget.classList.add('active');
+    }
 
     if (tabId === 'tab3') {
         setTimeout(resizeCanvas, 100);
+    }
+    
+    // Se apriamo lo storico, carichiamo i dati
+    if (tabId === 'tab-storico') {
+        caricaStorico();
     }
 }
 
@@ -45,6 +59,7 @@ function resizeCanvas() {
 
 window.addEventListener("resize", resizeCanvas);
 
+// --- RICERCA ARTICOLI ---
 async function searchInDanea() {
     let input = document.getElementById('searchArticolo');
     let query = input.value.trim();
@@ -74,7 +89,7 @@ async function searchInDanea() {
         let imgUrl = art["Immagine"] ? art["Immagine"] : 'https://via.placeholder.com/50?text=No+Img';
 
         p.innerHTML = `
-            <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
+            <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor:pointer;">
                 <img src="${imgUrl}" style="width:50px; height:50px; object-fit:cover; border-radius:5px; margin-right:15px; border: 1px solid #ddd;">
                 <div>
                     <strong style="color: #005aab;">${art["Cod."]}</strong><br>
@@ -115,7 +130,92 @@ function readFileAsDataURL(file) {
     });
 }
 
-// --- GENERAZIONE E INVIO (VERSIONE SUPABASE) ---
+// --- FUNZIONI STORICO (NUOVE) ---
+
+async function caricaStorico() {
+    const lista = document.getElementById('lista-rapportini');
+    if(!lista) return;
+    lista.innerHTML = "<p style='text-align:center;'>Caricamento in corso...</p>";
+
+    const { data, error } = await supabaseClient
+        .from('rapportini')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        lista.innerHTML = "Errore nel caricamento.";
+        return;
+    }
+
+    lista.innerHTML = data.map(rap => `
+        <div class="card-rapportino" style="background:white; padding:15px; border-radius:10px; margin-bottom:15px; border-left: 5px solid ${rap.completato ? '#27ae60' : '#f39c12'}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong style="font-size:1.1rem;">${rap.zona}</strong>
+                <input type="checkbox" style="transform: scale(1.5);" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato('${rap.id}', this.checked)">
+            </div>
+            <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
+                <span>📅 ${rap.data}</span> | <span>👷 ${rap.operatore}</span>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button onclick="window.open('${rap.pdf_url}', '_blank')" style="background:#004a99; color:white; border:none; padding:8px; border-radius:5px;">👁️ Vedi PDF</button>
+                <button onclick="reinviaRapporto('${rap.id}')" style="background:#27ae60; color:white; border:none; padding:8px; border-radius:5px;">📧 Reinvia</button>
+                <button onclick="eliminaRapporto('${rap.id}')" style="background:#e74c3c; color:white; border:none; padding:8px; border-radius:5px; grid-column: span 2;">🗑️ Elimina</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function aggiornaStato(id, completato) {
+    const { error } = await supabaseClient
+        .from('rapportini')
+        .update({ completato: completato })
+        .eq('id', id);
+    
+    if (error) alert("Errore aggiornamento stato");
+}
+
+async function eliminaRapporto(id) {
+    if (!confirm("Sei sicuro di voler eliminare questo rapporto dallo storico?")) return;
+    
+    const { error } = await supabaseClient
+        .from('rapportini')
+        .delete()
+        .eq('id', id);
+    
+    if (error) {
+        alert("Errore durante l'eliminazione");
+    } else {
+        caricaStorico();
+    }
+}
+
+async function reinviaRapporto(id) {
+    const { data, error } = await supabaseClient
+        .from('rapportini')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (error || !data) return alert("Errore recupero dati");
+
+    if (confirm(`Vuoi reinviare l'email per il rapporto a ${data.zona}?`)) {
+        const { error: funcError } = await supabaseClient.functions.invoke('send-email-rapportino', {
+            body: { 
+                operatore: data.operatore, 
+                zona: data.zona, 
+                dataInt: data.data, 
+                descrizione: data.descrizione, 
+                pdfUrl: data.pdf_url,
+                fileName: `Reinvio_${data.zona}.pdf`
+            }
+        });
+
+        if (funcError) alert("Errore durante il reinvio");
+        else alert("🚀 Email reinviata con successo!");
+    }
+}
+
+// --- GENERAZIONE E INVIO ORIGINALE (CON AGGIUNTA COMPLETATO) ---
 async function generaEInviaPDF() {
     console.log("Inizio procedura Cloud...");
     try {
@@ -132,7 +232,6 @@ async function generaEInviaPDF() {
             return;
         }
 
-        // --- COSTRUZIONE PDF ---
         const imgLogo = document.querySelector('.header-logo img');
         if (imgLogo) {
             try { doc.addImage(imgLogo, 'PNG', 10, 10, 50, 18); } catch(e) { console.log("Logo skip"); }
@@ -189,11 +288,9 @@ async function generaEInviaPDF() {
             }
         }
 
-        // 1. TRASFORMA PDF IN BLOB PER UPLOAD
         const pdfBlob = doc.output('blob');
         const fileName = `${Date.now()}_Rapporto_${zona.replace(/\s+/g, '_')}.pdf`;
 
-        // 2. UPLOAD SU SUPABASE STORAGE (Richiede bucket 'rapportini-pdf' pubblico)
         const { data: storageData, error: storageError } = await supabaseClient
             .storage
             .from('rapportini-pdf')
@@ -201,11 +298,10 @@ async function generaEInviaPDF() {
 
         if (storageError) throw new Error("Errore Upload Storage: " + storageError.message);
 
-        // 3. OTTIENI URL PUBBLICO
         const { data: urlData } = supabaseClient.storage.from('rapportini-pdf').getPublicUrl(fileName);
         const pdfUrl = urlData.publicUrl;
 
-        // 4. SALVA NEL DATABASE
+        // Salva nel DB includendo il flag completato: false di default
         const { error: dbError } = await supabaseClient
             .from('rapportini')
             .insert([{
@@ -215,37 +311,27 @@ async function generaEInviaPDF() {
                 descrizione: descrizione,
                 materiali: carrello,
                 firma: firmaData,
-                pdf_url: pdfUrl // <--- Nuova colonna
+                pdf_url: pdfUrl,
+                completato: false 
             }]);
 
         if (dbError) throw dbError;
 
-        // 5. INVOCA EDGE FUNCTION PER INVIO EMAIL
-        // Invieremo i dati alla funzione che userà Resend lato server
-        const { data: funcData, error: funcError } = await supabaseClient.functions.invoke('send-email-rapportino', {
-            body: { 
-                operatore, 
-                zona, 
-                dataInt, 
-                descrizione, 
-                pdfUrl,
-                fileName
-            }
+        const { error: funcError } = await supabaseClient.functions.invoke('send-email-rapportino', {
+            body: { operatore, zona, dataInt, descrizione, pdfUrl, fileName }
         });
 
         if (funcError) {
-            console.error("Errore funzione:", funcError);
-            alert("✅ Rapporto salvato nel cloud, ma l'invio email automatico è in coda o ha avuto un intoppo.");
+            alert("✅ Rapporto salvato, ma errore invio email.");
         } else {
-            alert("🚀 Rapporto salvato e inviato correttamente!");
+            alert("🚀 Rapporto inviato con successo!");
         }
 
-        // Scarica comunque una copia locale per sicurezza
         doc.save(fileName);
+        openTab(null, 'home-screen'); // Torna alla home dopo l'invio
 
     } catch (err) {
-        console.error(err);
-        alert("❌ Errore critico: " + err.message);
+        alert("❌ Errore: " + err.message);
     }
 }
 
@@ -297,7 +383,6 @@ async function generaAnteprimaPDF() {
 
         window.open(doc.output('bloburl'), '_blank');
     } catch (err) {
-        console.error(err);
         alert("Errore anteprima: " + err.message);
     }
 }
