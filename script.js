@@ -5,7 +5,7 @@ const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 let carrello = [];
 let signaturePad;
 
-// --- GESTIONE TAB E NAVIGAZIONE ---
+// --- NAVIGAZIONE ---
 function openTab(evt, tabId) {
     const contents = document.querySelectorAll('.tab-content');
     contents.forEach(tab => tab.style.display = 'none');
@@ -13,37 +13,58 @@ function openTab(evt, tabId) {
     const buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
     
-    const targetTab = document.getElementById(tabId);
-    if (targetTab) {
-        targetTab.style.display = 'block';
-    }
-    
-    if(evt && evt.currentTarget.classList.contains('tab-btn')) {
-        evt.currentTarget.classList.add('active');
-    }
+    document.getElementById(tabId).style.display = 'block';
+    if(evt) evt.currentTarget.classList.add('active');
 
-    if (tabId === 'tab3') {
-        setTimeout(resizeCanvas, 100);
-    }
-    
-    // Se apriamo lo storico, carichiamo i dati
-    if (tabId === 'tab-storico') {
-        caricaStorico();
-    }
+    if (tabId === 'tab3') setTimeout(resizeCanvas, 100);
 }
 
+function mostraApp() {
+    document.getElementById('home-screen').style.display = 'none';
+    document.getElementById('tab-storico').style.display = 'none';
+    document.getElementById('app-interface').style.display = 'block';
+}
+
+function tornaAllaHome() {
+    document.getElementById('app-interface').style.display = 'none';
+    document.getElementById('tab-storico').style.display = 'none';
+    document.getElementById('home-screen').style.display = 'block';
+    // Reset campi se necessario qui
+}
+
+// --- STORICO ---
+async function caricaStorico() {
+    const lista = document.getElementById('lista-rapportini');
+    lista.innerHTML = "<p>Caricamento...</p>";
+
+    const { data, error } = await supabaseClient
+        .from('rapportini')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        lista.innerHTML = "<p style='color:red;'>Errore: " + error.message + "</p>";
+        return;
+    }
+
+    lista.innerHTML = data.map(rap => `
+        <div class="card-rapportino" style="border-left: 6px solid ${rap.completato ? '#27ae60' : '#f39c12'};">
+            <strong>${rap.zona}</strong><br>
+            <small>${rap.data} - ${rap.operatore}</small>
+            <div class="azioni-storico">
+                <button onclick="window.open('${rap.pdf_url}', '_blank')">📄 PDF</button>
+                <button onclick="eliminaRapporto('${rap.id}')" style="background:#e74c3c; color:white;">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Inizializzazione Firma
 window.onload = () => {
     const canvas = document.getElementById('signature-pad');
     if (canvas) {
-        signaturePad = new SignaturePad(canvas, {
-            backgroundColor: 'rgb(255, 255, 255)',
-            penColor: 'rgb(0, 0, 0)',
-            velocityFilterWeight: 0.7
-        });
+        signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
         resizeCanvas();
-    }
-    if(document.getElementById('dataIntervento')) {
-        document.getElementById('dataIntervento').valueAsDate = new Date();
     }
 };
 
@@ -54,9 +75,8 @@ function resizeCanvas() {
     canvas.width = canvas.offsetWidth * ratio;
     canvas.height = canvas.offsetHeight * ratio;
     canvas.getContext("2d").scale(ratio, ratio);
-    if (signaturePad) signaturePad.clear(); 
 }
-
+// ... (resto delle funzioni searchInDanea e generaEInviaPDF rimangono uguali)
 window.addEventListener("resize", resizeCanvas);
 // Funzione per tornare alla Home (da aggiungere/aggiornare)
 function tornaAllaHome() {
@@ -450,4 +470,5 @@ async function generaAnteprimaPDF() {
         alert("Errore anteprima: " + err.message);
     }
 }
+
 
