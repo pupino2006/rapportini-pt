@@ -20,6 +20,30 @@
     </style>
 </head>
 <body>
+    
+    <div id="home-screen" class="tab-content" style="display: block; text-align: center; padding: 40px 20px;">
+    <img src="logoapp.png" style="width: 150px; margin-bottom: 30px;">
+    <h2 style="color: #004a99;">Gestione Interventi</h2>
+    
+    <button onclick="openTab(null, 'tab1')" class="btn-main-menu">
+        ➕ NUOVO RAPPORTO
+    </button>
+    
+    <button onclick="caricaStorico(); openTab(null, 'tab-storico')" class="btn-main-menu" style="background: #6c757d;">
+        📂 STORICO RAPPORTI
+    </button>
+</div>
+
+<div id="tab-storico" class="tab-content" style="display: none;">
+    <h3>Storico Rapportini</h3>
+    <div id="lista-rapportini">
+        </div>
+</div>
+
+<div id="modal-foto" class="modal" onclick="this.style.display='none'">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="img-anteprima">
+</div>
 
 <div id="app">
     <div class="header-logo" style="background: white; padding: 20px; text-align: center;">
@@ -108,6 +132,7 @@
 
 </body>
 </html>
+
 
 
 
