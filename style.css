@@ -4,11 +4,12 @@ body {
     margin: 0; 
     background: #f0f2f5; 
     color: #333;
-    -webkit-tap-highlight-color: transparent; /* Rimuove il riflesso blu al tocco su mobile */
+    -webkit-tap-highlight-color: transparent; /* Migliora il tocco su smartphone */
 }
 
 /* HEADER E LOGO */
 .header-logo {
+    position: relative; /* Necessario per posizionare il tasto Home all'interno */
     width: 100%;
     background: white;
     padding: 15px 0;
@@ -22,6 +23,27 @@ body {
     height: 60px;
     width: auto;
     object-fit: contain;
+}
+
+/* NUOVO: Tasto Home nell'header durante la compilazione */
+.btn-home-icon {
+    position: absolute;
+    left: 15px;
+    background: #f0f2f5;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.btn-home-icon:active {
+    background: #ddd;
 }
 
 /* NAVIGAZIONE A SCHEDE (TABS) */
@@ -84,12 +106,26 @@ body {
     cursor: pointer;
     display: block;
     box-shadow: 0 4px 10px rgba(0,74,153,0.2);
-    transition: transform 0.2s, background 0.2s;
+    transition: transform 0.2s;
 }
 
 .btn-main-menu:active {
     transform: scale(0.96);
-    background: #003366;
+}
+
+/* NUOVO: Tasto Indietro/Home nello Storico */
+.btn-back {
+    background: #004a99;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* STORICO RAPPORTINI */
@@ -104,9 +140,18 @@ body {
 
 .azioni-storico {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr 1fr 1fr; /* Tre colonne per i tasti */
+    gap: 8px;
     margin-top: 10px;
+}
+
+.azioni-storico button {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-size: 0.8rem;
 }
 
 /* FORM E INPUT */
@@ -130,10 +175,6 @@ body {
     font-family: inherit;
 }
 
-textarea {
-    resize: none;
-}
-
 /* RICERCA ARTICOLI */
 .search-box {
     position: relative;
@@ -149,10 +190,6 @@ textarea {
     outline: none;
 }
 
-#searchArticolo:focus {
-    border-color: #ff8c00;
-}
-
 #risultatiRicerca { 
     position: absolute; 
     width: 100%;
@@ -163,19 +200,7 @@ textarea {
     box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
     border-radius: 0 0 10px 10px;
     border: 1px solid #ddd;
-}
-
-/* LISTA MATERIALI */
-.card-materiale { 
-    background: white; 
-    padding: 12px; 
-    margin-top: 10px; 
-    border-radius: 10px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    border-left: 5px solid #004a99;
+    border-top: none;
 }
 
 /* FIRMA */
@@ -190,13 +215,13 @@ textarea {
 #signature-pad {
     width: 100%;
     height: 200px;
-    cursor: crosshair;
+    touch-action: none;
 }
 
 /* BOTTONI AZIONE */
-.btn-send { background: #27ae60; color: white; border: none; padding: 18px; border-radius: 10px; cursor: pointer; font-size: 1.1rem; width: 100%; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 6px rgba(39, 174, 96, 0.2); }
+.btn-send { background: #27ae60; color: white; border: none; padding: 18px; border-radius: 10px; cursor: pointer; font-size: 1.1rem; width: 100%; font-weight: bold; margin-top: 20px; }
 .btn-preview { background: #34495e; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 1rem; width: 100%; font-weight: bold; margin-top: 10px; }
-.btn-clear { background: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+.btn-clear { background: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; margin-top: 10px; }
 
 /* MODAL ANTEPRIMA FOTO */
 .modal {
@@ -205,31 +230,4 @@ textarea {
     z-index: 9999;
     left: 0; top: 0; width: 100%; height: 100%;
     background-color: rgba(0,0,0,0.9);
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    max-width: 90%;
-    max-height: 80%;
-    border-radius: 10px;
-}
-
-.close {
-    position: absolute;
-    top: 20px;
-    right: 30px;
-    color: white;
-    font-size: 40px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-/* IMMAGINI NEI RISULTATI */
-.img-articolo {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 5px;
-    border: 1px solid #eee;
 }
