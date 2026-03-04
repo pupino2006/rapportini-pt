@@ -5,10 +5,9 @@ const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 let carrello = [];
 let signaturePad;
 
-// --- 1. NAVIGAZIONE (PULITA) ---
+// --- 1. NAVIGAZIONE ---
 
 function nascondiTutto() {
-    // Nasconde tutti i macro-contenitori
     document.getElementById('home-screen').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'none';
     document.getElementById('app-interface').style.display = 'none';
@@ -26,7 +25,6 @@ function tornaAllaHome() {
 }
 
 function openTab(evt, tabId) {
-    // Gestisce le sotto-schede della compilazione (Dati, Materiali, Firma)
     const sections = ['tab1', 'tab2', 'tab3'];
     sections.forEach(id => {
         const el = document.getElementById(id);
@@ -52,74 +50,78 @@ function openTab(evt, tabId) {
     }
 }
 
-// --- 2. GESTIONE STORICO ---
+// --- 2. GESTIONE STORICO (Allineata allo schema SQL) ---
 
 async function caricaStorico() {
     nascondiTutto();
     const lista = document.getElementById('lista-rapportini');
     document.getElementById('tab-storico').style.display = 'block';
     
-    lista.innerHTML = "<p style='text-align:center;'>Caricamento in corso...</p>";
+    lista.innerHTML = "<p style='text-align:center;'>Caricamento dati...</p>";
 
     try {
         const { data, error } = await supabaseClient
             .from('rapportini')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('data', { ascending: false }); // Ordina per data intervento
 
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            lista.innerHTML = "<p style='text-align:center;'>Nessun rapporto in archivio.</p>";
+            lista.innerHTML = "<p style='text-align:center;'>Nessun rapporto presente.</p>";
             return;
         }
 
         lista.innerHTML = data.map(rap => `
             <div class="card-rapportino" style="border-left: 6px solid ${rap.completato ? '#27ae60' : '#f39c12'}; margin-bottom:15px; background:white; padding:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                 <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom:10px;">
-                    <strong style="font-size:1.1rem;">${rap.zona || 'N/A'}</strong>
-                    <input type="checkbox" style="transform: scale(1.3);" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato('${rap.id}', this.checked)">
+                    <strong style="font-size:1.1rem;">${rap.zona || 'Zona N.D.'}</strong>
+                    <input type="checkbox" title="Segna come completato" style="transform: scale(1.3);" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato(${rap.id}, this.checked)">
                 </div>
                 <div style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">
-                    📅 ${rap.data || 'N/A'} | 👷 ${rap.operatore || 'N/A'}
+                    📅 ${rap.data} | 👷 ${rap.operatore || 'N.D.'}
                 </div>
                 <div class="azioni-storico" style="display: flex; gap: 8px;">
-                    <button onclick="window.open('${rap.pdf_url}', '_blank')" style="flex:1; padding:8px; background:#004a99; color:white; border:none; border-radius:4px;">👁️ PDF</button>
-                    <button onclick="eliminaRapporto('${rap.id}')" style="padding:8px; background:#e74c3c; color:white; border:none; border-radius:4px;">🗑️</button>
+                    ${rap.pdf_url ? `<button onclick="window.open('${rap.pdf_url}', '_blank')" style="flex:1; padding:8px; background:#004a99; color:white; border:none; border-radius:4px; cursor:pointer;">👁️ Vedi PDF</button>` : ''}
+                    <button onclick="eliminaRapporto(${rap.id})" style="padding:8px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer;">🗑️</button>
                 </div>
             </div>
         `).join('');
     } catch (err) {
-        console.error(err);
-        lista.innerHTML = `<p style="color:red; text-align:center;">Errore database: ${err.message}</p>`;
+        lista.innerHTML = `<p style="color:red; text-align:center;">Errore caricamento: ${err.message}</p>`;
     }
 }
 
-// --- 3. INIZIALIZZAZIONE E FIRMA ---
+// --- 3. LOGICA DATABASE ---
 
-window.onload = () => {
-    const canvas = document.getElementById('signature-pad');
-    if (canvas) {
-        signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-        resizeCanvas();
+async function aggiornaStato(id, completato) {
+    const { error } = await supabaseClient
+        .from('rapportini')
+        .update({ completato: completato })
+        .eq('id', id);
+    
+    if (error) {
+        alert("Errore nell'aggiornamento dello stato");
+        console.error(error);
     }
-    if(document.getElementById('dataIntervento')) {
-        document.getElementById('dataIntervento').valueAsDate = new Date();
-    }
-};
-
-function resizeCanvas() {
-    const canvas = document.getElementById('signature-pad');
-    if (!canvas) return;
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    canvas.width = canvas.offsetWidth * ratio;
-    canvas.height = canvas.offsetHeight * ratio;
-    canvas.getContext("2d").scale(ratio, ratio);
 }
 
-window.addEventListener("resize", resizeCanvas);
+async function eliminaRapporto(id) {
+    if (!confirm("Vuoi eliminare definitivamente questo rapporto?")) return;
+    
+    const { error } = await supabaseClient
+        .from('rapportini')
+        .delete()
+        .eq('id', id);
+    
+    if (error) {
+        alert("Errore durante l'eliminazione");
+    } else {
+        caricaStorico(); // Ricarica la lista
+    }
+}
 
-// --- 4. RICERCA ARTICOLI ---
+// --- 4. RICERCA E CARRELLO ---
 
 async function searchInDanea() {
     let input = document.getElementById('searchArticolo');
@@ -161,32 +163,32 @@ function aggiornaCarrelloUI() {
             <div><b>${item.cod}</b><br><small>${item.desc}</small></div>
             <div style="display:flex; gap:10px; align-items:center;">
                 <input type="number" value="${item.qta}" style="width:50px; padding:5px;" onchange="carrello[${index}].qta=this.value">
-                <button onclick="carrello.splice(${index}, 1); aggiornaCarrelloUI()" style="color:red; border:none; background:none; font-size:1.2rem;">❌</button>
+                <button onclick="carrello.splice(${index}, 1); aggiornaCarrelloUI()" style="color:red; border:none; background:none; font-size:1.2rem; cursor:pointer;">❌</button>
             </div>
         </div>
     `).join('');
 }
 
-// --- 5. AZIONI DATABASE ---
+// --- 5. INIZIALIZZAZIONE ---
 
-async function aggiornaStato(id, completato) {
-    try {
-        await supabaseClient.from('rapportini').update({ completato: completato }).eq('id', id);
-    } catch (e) { alert("Errore aggiornamento"); }
-}
-
-async function eliminaRapporto(id) {
-    if (confirm("Vuoi eliminare definitivamente questo rapporto?")) {
-        await supabaseClient.from('rapportini').delete().eq('id', id);
-        caricaStorico();
+window.onload = () => {
+    const canvas = document.getElementById('signature-pad');
+    if (canvas) {
+        signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+        resizeCanvas();
     }
+    if(document.getElementById('dataIntervento')) {
+        document.getElementById('dataIntervento').valueAsDate = new Date();
+    }
+};
+
+function resizeCanvas() {
+    const canvas = document.getElementById('signature-pad');
+    if (!canvas) return;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    canvas.getContext("2d").scale(ratio, ratio);
 }
 
-async function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
+window.addEventListener("resize", resizeCanvas);
