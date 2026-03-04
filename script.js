@@ -62,28 +62,46 @@ function openTab(evt, tabId) {
 // --- STORICO ---
 async function caricaStorico() {
     const lista = document.getElementById('lista-rapportini');
-    lista.innerHTML = "<p>Caricamento...</p>";
+    lista.innerHTML = "<p style='text-align:center;'>Verifica connessione database...</p>";
 
-    const { data, error } = await supabaseClient
-        .from('rapportini')
-        .select('*')
-        .order('created_at', { ascending: false });
+    // Mostra la sezione storico
+    document.getElementById('home-screen').style.display = 'none';
+    document.getElementById('app-interface').style.display = 'none';
+    document.getElementById('tab-storico').style.display = 'block';
 
-    if (error) {
-        lista.innerHTML = "<p style='color:red;'>Errore: " + error.message + "</p>";
-        return;
-    }
+    try {
+        const { data, error } = await supabaseClient
+            .from('rapportini') // CONTROLLA: la tabella si chiama 'rapportini' su Supabase?
+            .select('*')
+            .order('created_at', { ascending: false });
 
-    lista.innerHTML = data.map(rap => `
-        <div class="card-rapportino" style="border-left: 6px solid ${rap.completato ? '#27ae60' : '#f39c12'};">
-            <strong>${rap.zona}</strong><br>
-            <small>${rap.data} - ${rap.operatore}</small>
-            <div class="azioni-storico">
-                <button onclick="window.open('${rap.pdf_url}', '_blank')">📄 PDF</button>
-                <button onclick="eliminaRapporto('${rap.id}')" style="background:#e74c3c; color:white;">🗑️</button>
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            lista.innerHTML = "<p style='text-align:center;'>Nessun rapporto presente in archivio.</p>";
+            return;
+        }
+
+        lista.innerHTML = data.map(rap => `
+            <div class="card-rapportino">
+                <strong>Zona: ${rap.zona || 'Non specificata'}</strong><br>
+                <small>Operatore: ${rap.operatore || 'N/D'} | Data: ${rap.data || 'N/D'}</small>
+                <div class="azioni-storico">
+                    ${rap.pdf_url ? `<button onclick="window.open('${rap.pdf_url}', '_blank')">👁️ PDF</button>` : ''}
+                    <button onclick="eliminaRapporto('${rap.id}')" style="background:#ff4444; color:white;">🗑️</button>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+
+    } catch (err) {
+        console.error("Errore completo:", err);
+        lista.innerHTML = `
+            <div style="color:red; text-align:center; padding:10px;">
+                <p>⚠️ Errore di caricamento</p>
+                <small>${err.message}</small><br>
+                <button onclick="caricaStorico()" style="margin-top:10px;">Riprova</button>
+            </div>`;
+    }
 }
 
 // Inizializzazione Firma
@@ -497,6 +515,7 @@ async function generaAnteprimaPDF() {
         alert("Errore anteprima: " + err.message);
     }
 }
+
 
 
 
