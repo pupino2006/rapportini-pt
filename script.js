@@ -7,63 +7,60 @@ let signaturePad;
 
 // --- 1. NAVIGAZIONE ---
 
-function mostraApp() {
-    // Nasconde la Home e lo Storico
+function nascondiTutto() {
     document.getElementById('home-screen').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'none';
-    
-    // Mostra l'interfaccia dell'app (Header, Nav e Contenuto)
+    document.getElementById('app-interface').style.display = 'none';
+}
+
+function mostraApp() {
+    nascondiTutto();
     document.getElementById('app-interface').style.display = 'block';
-    
-    // Reset alle tab iniziali
     openTab(null, 'tab1');
 }
 
 function tornaAllaHome() {
-    // Nasconde l'interfaccia app e lo storico
-    document.getElementById('app-interface').style.display = 'none';
-    document.getElementById('tab-storico').style.display = 'none';
-    
-    // Mostra la Home
+    nascondiTutto();
     document.getElementById('home-screen').style.display = 'block';
 }
 
-function openTab(evt, tabId) {
-    // Nasconde tutte le sezioni interne (tab1, tab2, tab3)
-    const sections = ['tab1', 'tab2', 'tab3'];
-    sections.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    });
+async function caricaStorico() {
+    nascondiTutto();
+    const lista = document.getElementById('lista-rapportini');
+    document.getElementById('tab-storico').style.display = 'block';
+    
+    lista.innerHTML = "<p style='text-align:center;'>Caricamento...</p>";
 
-    // Rimuove classe active dai bottoni
-    const buttons = document.querySelectorAll('.tab-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
+    try {
+        const { data, error } = await supabaseClient
+            .from('rapportini')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-    // Mostra la sezione corretta
-    const target = document.getElementById(tabId);
-    if (target) {
-        target.style.display = 'block';
-        if (evt) {
-            evt.currentTarget.classList.add('active');
-        } else {
-            // Se attivato da codice, cerca il bottone corrispondente
-            const btn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
-            if(btn) btn.classList.add('active');
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            lista.innerHTML = "<p style='text-align:center;'>Nessun rapporto in archivio.</p>";
+            return;
         }
-    }
 
-    // Se entriamo nella tab firma, resize obbligatorio del canvas
-    if (tabId === 'tab3') {
-        setTimeout(resizeCanvas, 150);
+        lista.innerHTML = data.map(rap => `
+            <div class="card-rapportino" style="border-left: 6px solid ${rap.completato ? '#27ae60' : '#f39c12'};">
+                <div style="display:flex; justify-content: space-between; align-items: center;">
+                    <strong>${rap.zona || 'Senza Zona'}</strong>
+                    <input type="checkbox" ${rap.completato ? 'checked' : ''} onchange="aggiornaStato('${rap.id}', this.checked)">
+                </div>
+                <p><small>📅 ${rap.data || 'No data'} | 👷 ${rap.operatore || 'No op.'}</small></p>
+                <div class="azioni-storico">
+                    <button onclick="window.open('${rap.pdf_url}', '_blank')">👁️ PDF</button>
+                    <button onclick="eliminaRapporto('${rap.id}')" style="background:#ff4444; color:white;">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        lista.innerHTML = `<p style="color:red;">Errore: ${err.message}. Controlla che la tabella 'rapportini' esista su Supabase.</p>`;
     }
 }
-
-// --- 2. GESTIONE STORICO ---
-
-async function caricaStorico() {
-    const lista = document.getElementById('lista-rapportini');
-    if(!lista) return;
 
     // Navigazione
     document.getElementById('home-screen').style.display = 'none';
@@ -205,3 +202,4 @@ async function readFileAsDataURL(file) {
         reader.readAsDataURL(file);
     });
 }
+
