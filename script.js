@@ -81,36 +81,43 @@ window.addEventListener("resize", resizeCanvas);
 // --- LOGICA ARCHIVIO (STORICO) ---
 async function fetchStorico() {
     const listaDiv = document.getElementById('lista-rapportini');
-    listaDiv.innerHTML = '<p style="padding:20px;">Caricamento in corso...</p>';
+    listaDiv.innerHTML = '<p style="padding:20px;">🔄 Caricamento dati...</p>';
     
     try {
         const { data, error } = await supabaseClient
             .from('rapportini')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('data', { ascending: false }); // Ordina per la tua colonna 'data'
 
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            listaDiv.innerHTML = '<p style="padding:20px;">Nessun rapporto trovato.</p>';
+            listaDiv.innerHTML = '<p style="padding:20px;">📭 L\'archivio è vuoto.</p>';
             return;
         }
 
-        listaDiv.innerHTML = data.map(r => `
-            <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white;">
-                <div>
-                    <strong style="color:#004a99; font-size: 16px;">${r.zona || 'Senza Zona'}</strong><br>
-                    <small style="color: #666;">${r.data || ''} - ${r.operatore || 'N.D.'}</small>
+        listaDiv.innerHTML = data.map(r => {
+            // Se pdf_url è null, mettiamo un'icona di avviso invece del link
+            const linkPdf = r.pdf_url 
+                ? `<a href="${r.pdf_url}" target="_blank" style="text-decoration:none; font-size: 24px;">📄</a>`
+                : `<span title="Documento non disponibile">⚠️</span>`;
+
+            return `
+                <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white; margin-bottom:5px; border-radius:8px;">
+                    <div>
+                        <strong style="color:#004a99;">${r.zona || 'Zona N.D.'}</strong><br>
+                        <small>Data: ${r.data || 'N.D.'} | Op: ${r.operatore || 'N.D.'}</small>
+                    </div>
+                    <div>
+                        ${linkPdf}
+                    </div>
                 </div>
-                <div>
-                    ${r.pdf_url ? `<a href="${r.pdf_url}" target="_blank" style="text-decoration:none; font-size: 24px;">📄</a>` : '❌'}
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
     } catch (err) {
-        console.error("Errore archivio:", err);
-        listaDiv.innerHTML = `<p style="padding:20px; color:red;">Errore: ${err.message}</p>`;
+        console.error("Errore completo:", err);
+        listaDiv.innerHTML = `<p style="padding:20px; color:red;">❌ Errore caricamento: ${err.message}</p>`;
     }
 }
 
@@ -364,3 +371,4 @@ async function generaAnteprimaPDF() {
         alert("Errore anteprima: " + err.message);
     }
 }
+
