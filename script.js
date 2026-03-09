@@ -196,4 +196,127 @@ function resizeCanvas() {
 }
 
 window.addEventListener("resize", resizeCanvas);
+// --- 6. GENERAZIONE PDF E INVIO ---
+
+async function generaEInviaPDF() {
+    const btn = document.querySelector('.btn-send');
+    btn.disabled = true;
+    btn.innerText = "Invio in corso...";
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Recupero dati dai campi
+        const zona = document.getElementById('zona').value;
+        const operatore = document.getElementById('operatore').value;
+        const dataInt = document.getElementById('dataIntervento').value;
+        const descrizione = document.getElementById('descrizioneIntervento').value;
+
+        // Validazione minima
+        if (!zona || !operatore) {
+            alert("Inserisci almeno Zona e Operatore!");
+            btn.disabled = false;
+            btn.innerText = "🚀 INVIA RAPPORTO";
+            return;
+        }
+
+        // Costruzione semplice del PDF
+        doc.setFontSize(18);
+        doc.text("RAPPORTO DI INTERVENTO", 105, 20, { align: "center" });
+        doc.setFontSize(12);
+        doc.text(`Data: ${dataInt}`, 20, 40);
+        doc.text(`Operatore: ${operatore}`, 20, 50);
+        doc.text(`Zona: ${zona}`, 20, 60);
+        doc.text("Descrizione Lavoro:", 20, 80);
+        doc.text(doc.splitTextToSize(descrizione, 170), 20, 90);
+
+        // Aggiunta materiali dal carrello
+        doc.text("Materiali utilizzati:", 20, 140);
+        let y = 150;
+        carrello.forEach(item => {
+            doc.text(`- ${item.cod}: ${item.desc} (Q.tà: ${item.qta})`, 25, y);
+            y += 10;
+        });
+
+        // Firma
+        if (!signaturePad.isEmpty()) {
+            const firmaImg = signaturePad.toDataURL();
+            doc.addPage();
+            doc.text("Firma del Cliente:", 20, 20);
+            doc.addImage(firmaImg, 'PNG', 20, 30, 100, 50);
+        }
+
+        // 1. Trasformazione in Blob
+        const pdfBlob = doc.output('blob');
+        const nomeFile = `Rapporto_${zona}_${Date.now()}.pdf`.replace(/\s+/g, '_');
+
+        // 2. Caricamento su Supabase Storage (Bucket: carichi)
+        const { data: uploadData, error: uploadError } = await supabaseClient
+            .storage
+            .from('carichi')
+            .upload(nomeFile, pdfBlob);
+
+        if (uploadError) throw uploadError;
+
+        // 3. Recupero URL Pubblico
+        const { data: urlData } = supabaseClient
+            .storage
+            .from('carichi')
+            .getPublicUrl(nomeFile);
+
+        const pdfUrl = urlData.publicUrl;
+
+        // 4. Salvataggio nel Database (Tabella: rapportini)
+        const { error: dbError } = await supabaseClient
+            .from('rapportini')
+            .insert([{
+                data: dataInt,
+                operatore: operatore,
+                zona: zona,
+                descrizione: descrizione,
+                materiali: carrello,
+                pdf_url: pdfUrl,
+                completato: false
+            }]);
+
+        if (dbError) throw dbError;
+
+        // 5. CHIAMATA ALLA EDGE FUNCTION (Invio Mail)
+        // Usiamo i nomi dei campi che la tua Edge Function si aspetta
+        await fetch("https://vnzrewcbnoqbqvzckome.supabase.co/functions/v1/invio-rapportini", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                operatore: operatore,
+                zona: zona,
+                dataInt: dataInt,
+                descrizione: descrizione,
+                pdfUrl: pdfUrl // La "U" maiuscola come abbiamo visto nel debug!
+            })
+        });
+
+        alert("Rapporto inviato e archiviato con successo!");
+        tornaAllaHome();
+
+    } catch (err) {
+        console.error(err);
+        alert("Errore durante l'invio: " + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "🚀 INVIA RAPPORTO";
+    }
+}
+
+function generaAnteprimaPDF() {
+    // Versione semplificata per l'anteprima locale
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text("ANTEPRIMA RAPPORTO", 20, 20);
+    doc.text(`Zona: ${document.getElementById('zona').value}`, 20, 40);
+    doc.text(`Descrizione: ${document.getElementById('descrizioneIntervento').value}`, 20, 50);
+    
+    window.open(doc.output('bloburl'), '_blank');
+}
+
 
