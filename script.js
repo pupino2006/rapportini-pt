@@ -79,48 +79,65 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 
 // --- LOGICA ARCHIVIO (STORICO) ---
+// --- VISUALIZZAZIONE ARCHIVIO CON SPUNTA ---
 async function fetchStorico() {
     const listaDiv = document.getElementById('lista-rapportini');
-    listaDiv.innerHTML = '<p style="padding:20px;">🔄 Caricamento dati...</p>';
+    listaDiv.innerHTML = '<p style="padding:20px;">🔄 Aggiornamento archivio...</p>';
     
     try {
         const { data, error } = await supabaseClient
             .from('rapportini')
             .select('*')
-            .order('data', { ascending: false }); // Ordina per la tua colonna 'data'
+            .order('data', { ascending: false });
 
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            listaDiv.innerHTML = '<p style="padding:20px;">📭 L\'archivio è vuoto.</p>';
+            listaDiv.innerHTML = '<p style="padding:20px;">Nessun rapporto trovato.</p>';
             return;
         }
 
-        listaDiv.innerHTML = data.map(r => {
-            // Se pdf_url è null, mettiamo un'icona di avviso invece del link
-            const linkPdf = r.pdf_url 
-                ? `<a href="${r.pdf_url}" target="_blank" style="text-decoration:none; font-size: 24px;">📄</a>`
-                : `<span title="Documento non disponibile">⚠️</span>`;
-
-            return `
-                <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white; margin-bottom:5px; border-radius:8px;">
-                    <div>
-                        <strong style="color:#004a99;">${r.zona || 'Zona N.D.'}</strong><br>
-                        <small>Data: ${r.data || 'N.D.'} | Op: ${r.operatore || 'N.D.'}</small>
-                    </div>
-                    <div>
-                        ${linkPdf}
+        listaDiv.innerHTML = data.map(r => `
+            <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: ${r.completato ? '#e8f5e9' : 'white'}; margin-bottom:5px; border-radius:8px; transition: 0.3s;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <input type="checkbox" 
+                           ${r.completato ? 'checked' : ''} 
+                           onchange="toggleCompletato(${r.id}, this.checked)" 
+                           style="width: 20px; height: 20px; cursor: pointer;">
+                    
+                    <div style="opacity: ${r.completato ? '0.6' : '1'}">
+                        <strong style="color:#004a99;">${r.zona || 'N.D.'}</strong><br>
+                        <small>${r.data} - ${r.operatore || 'N.D.'}</small>
                     </div>
                 </div>
-            `;
-        }).join('');
+                
+                <div>
+                    ${r.pdf_url ? `<a href="${r.pdf_url}" target="_blank" style="text-decoration:none; font-size: 24px;">📄</a>` : '⚠️'}
+                </div>
+            </div>
+        `).join('');
 
     } catch (err) {
-        console.error("Errore completo:", err);
-        listaDiv.innerHTML = `<p style="padding:20px; color:red;">❌ Errore caricamento: ${err.message}</p>`;
+        listaDiv.innerHTML = `<p style="padding:20px; color:red;">Errore: ${err.message}</p>`;
     }
 }
 
+// --- FUNZIONE PER AGGIORNARE LO STATO "FATTO" ---
+async function toggleCompletato(id, stato) {
+    try {
+        const { error } = await supabaseClient
+            .from('rapportini')
+            .update({ completato: stato })
+            .eq('id', id);
+
+        if (error) throw error;
+        
+        // Ricarichiamo la lista per aggiornare i colori (opzionale, o puoi farlo via JS)
+        fetchStorico();
+    } catch (err) {
+        alert("Errore nell'aggiornamento: " + err.message);
+    }
+}
 // --- RICERCA ARTICOLI ---
 async function searchInDanea() {
     let input = document.getElementById('searchArticolo');
@@ -371,4 +388,5 @@ async function generaAnteprimaPDF() {
         alert("Errore anteprima: " + err.message);
     }
 }
+
 
