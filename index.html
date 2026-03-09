@@ -80,11 +80,18 @@
 </div>
 
 <div id="tab-storico" style="display:none; padding: 20px;">
-    <button onclick="tornaAllaHome()" style="padding: 10px; margin-bottom: 20px; background:#eee; border:1px solid #ccc; border-radius:5px;">🏠 Torna alla Home</button>
-    <h3>Archivio Rapportini</h3>
-    <div id="lista-rapportini"> Caricamento... </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <button onclick="tornaAllaHome()" style="padding: 10px 15px; background: #eee; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; font-weight: bold;">🏠 Torna alla Home</button>
+        <h3 style="color: #004a99; margin: 0;">Archivio Rapportini</h3>
+    </div>
+    <div id="lista-rapportini" style="background: white; border-radius: 8px; border: 1px solid #ddd; min-height: 200px;">
+        <p style="padding: 20px; color: #666;">Caricamento in corso...</p>
+    </div>
 </div>
+
+<button onclick="tornaAllaHome()" style="width: 100%; background: none; border: 1px solid #ccc; color: #666; padding: 10px; margin-top: 15px; border-radius: 8px; cursor: pointer;">❌ ANNULLA E TORNA ALLA HOME</button>
 
 <script src="script.js"></script>
 </body>
 </html>
+
