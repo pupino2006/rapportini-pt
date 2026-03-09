@@ -6,25 +6,65 @@ let carrello = [];
 let signaturePad;
 
 // --- NAVIGAZIONE ---
+// Funzione per mostrare il modulo "Nuovo Rapporto"
 function mostraApp() {
     document.getElementById('home-screen').style.display = 'none';
     document.getElementById('app-interface').style.display = 'block';
     document.getElementById('tab-storico').style.display = 'none';
-    // Inizializza la firma quando appare il modulo
-    setTimeout(resizeCanvas, 200);
+    // Reset dei campi per un nuovo inserimento
+    document.getElementById('zona').value = '';
+    document.getElementById('descrizioneIntervento').value = '';
+    carrello = [];
+    if(signaturePad) signaturePad.clear();
+    openTab(null, 'tab1');
 }
 
+// Funzione per mostrare l'Archivio
 function caricaStorico() {
+    console.log("Caricamento archivio...");
     document.getElementById('home-screen').style.display = 'none';
     document.getElementById('app-interface').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'block';
-    fetchStorico();
+    fetchStorico(); // Carica i dati reali
 }
 
+// Funzione per tornare alla Home
 function tornaAllaHome() {
     document.getElementById('home-screen').style.display = 'block';
     document.getElementById('app-interface').style.display = 'none';
     document.getElementById('tab-storico').style.display = 'none';
+}
+
+// Caricamento dati dall'Archivio (Supabase)
+async function fetchStorico() {
+    const listaDiv = document.getElementById('lista-rapportini');
+    try {
+        const { data, error } = await supabaseClient
+            .from('rapportini')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data.length === 0) {
+            listaDiv.innerHTML = '<p style="padding:20px;">Nessun rapporto trovato.</p>';
+            return;
+        }
+
+        listaDiv.innerHTML = data.map(r => `
+            <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color:#004a99;">${r.zona}</strong><br>
+                    <small>${new Date(r.created_at).toLocaleDateString()} - ${r.operatore}</small>
+                </div>
+                <a href="${r.pdf_url}" target="_blank" style="text-decoration: none; font-size: 20px;">📄</a>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error("Errore archivio:", err);
+        listaDiv.innerHTML = '<p style="padding:20px; color:red;">Errore nel caricamento dei dati.</p>';
+    }
 }
 
 function openTab(evt, tabId) {
@@ -129,3 +169,4 @@ async function fetchStorico() {
         </div>
     `).join('');
 }
+
