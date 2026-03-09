@@ -137,103 +137,68 @@ function aggiornaCarrelloUI() {
 
 // --- 4. GENERAZIONE PDF E INVIO ---
 async function generaEInviaPDF() {
+    console.log("Pulsante Invia cliccato");
     const btn = document.querySelector('.btn-send');
-    const zona = document.getElementById('zona').value;
-    const operatore = document.getElementById('operatore').value;
-    const dataInt = document.getElementById('dataIntervento').value;
-    const descrizione = document.getElementById('descrizioneIntervento').value;
+    
+    // Recupero valori
+    const zona = document.getElementById('zona')?.value;
+    const operatore = document.getElementById('operatore')?.value;
+    const dataInt = document.getElementById('dataIntervento')?.value;
+    const descrizione = document.getElementById('descrizioneIntervento')?.value;
 
-    if (!zona || !operatore) return alert("Inserisci Zona e Operatore!");
+    if (!zona || !operatore) {
+        alert("Attenzione: Inserisci Zona e Operatore!");
+        return;
+    }
 
     btn.disabled = true;
-    btn.innerText = "Invio in corso...";
+    btn.innerText = "⏳ Invio...";
 
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Struttura PDF
-        doc.setFontSize(18);
-        doc.text("RAPPORTO DI INTERVENTO", 105, 20, { align: "center" });
-        doc.setFontSize(12);
-        doc.text(`Data: ${dataInt}`, 20, 40);
-        doc.text(`Operatore: ${operatore}`, 20, 50);
-        doc.text(`Zona: ${zona}`, 20, 60);
-        doc.text("Descrizione:", 20, 80);
-        doc.text(doc.splitTextToSize(descrizione, 170), 20, 90);
-
-        // Materiali
-        doc.text("Materiali:", 20, 140);
-        let y = 150;
-        carrello.forEach(item => {
-            doc.text(`- ${item.cod}: ${item.qta}`, 25, y);
-            y += 8;
-        });
-
-        // Firma
-        if (!signaturePad.isEmpty()) {
-            doc.addPage();
-            doc.text("Firma Cliente:", 20, 20);
-            doc.addImage(signaturePad.toDataURL(), 'PNG', 20, 30, 100, 50);
-        }
+        doc.text("RAPPORTO INTERVENTO", 20, 20);
+        doc.text(`Zona: ${zona}`, 20, 30);
+        doc.text(`Operatore: ${operatore}`, 20, 40);
+        doc.text(`Data: ${dataInt}`, 20, 50);
+        
+        const pdfBlob = doc.output('blob');
+        const fileName = `Rapp_${Date.now()}.pdf`;
 
         // Upload
-        const pdfBlob = doc.output('blob');
-        const fileName = `Rapp_${zona.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
-        
         const { error: upErr } = await supabaseClient.storage.from('carichi').upload(fileName, pdfBlob);
         if (upErr) throw upErr;
 
         const { data: urlData } = supabaseClient.storage.from('carichi').getPublicUrl(fileName);
         const pdfUrl = urlData.publicUrl;
 
-        // DB Insert
-        const { error: dbErr } = await supabaseClient.from('rapportini').insert([{
-            data: dataInt, operatore, zona, descrizione, materiali: carrello, pdf_url: pdfUrl, completato: false
+        // DB
+        await supabaseClient.from('rapportini').insert([{
+            data: dataInt, operatore, zona, descrizione, materiali: carrello, pdf_url: pdfUrl
         }]);
-        if (dbErr) throw dbErr;
 
-        // Edge Function (Mail)
+        // Mail
         await fetch("https://vnzrewcbnoqbqvzckome.supabase.co/functions/v1/invio-rapportini", {
             method: 'POST',
             body: JSON.stringify({ operatore, zona, dataInt, descrizione, pdfUrl })
         });
 
-        alert("Inviato con successo!");
+        alert("Inviato!");
         location.reload();
-
     } catch (err) {
         alert("Errore: " + err.message);
-    } finally {
         btn.disabled = false;
         btn.innerText = "🚀 INVIA RAPPORTO";
     }
 }
 
+// Assicurati che generaAnteprimaPDF sia definita così:
 function generaAnteprimaPDF() {
+    console.log("Pulsante Anteprima cliccato");
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.text("ANTEPRIMA RAPPORTO", 20, 20);
-    doc.text(`Zona: ${document.getElementById('zona').value}`, 20, 40);
+    doc.text("ANTEPRIMA", 20, 20);
+    doc.text("Zona: " + (document.getElementById('zona')?.value || "N/D"), 20, 30);
     window.open(doc.output('bloburl'), '_blank');
 }
-
-// --- 5. INIZIALIZZAZIONE ---
-window.onload = () => {
-    const canvas = document.getElementById('signature-pad');
-    if (canvas) {
-        signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-        resizeCanvas();
-    }
-    document.getElementById('dataIntervento').valueAsDate = new Date();
-};
-
-function resizeCanvas() {
-    const canvas = document.getElementById('signature-pad');
-    if (!canvas) return;
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    canvas.width = canvas.offsetWidth * ratio;
-    canvas.height = canvas.offsetHeight * ratio;
-    canvas.getContext("2d").scale(ratio, ratio);
-}
-window.addEventListener("resize", resizeCanvas);
