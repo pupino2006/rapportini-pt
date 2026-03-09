@@ -82,7 +82,7 @@ window.addEventListener("resize", resizeCanvas);
 // --- VISUALIZZAZIONE ARCHIVIO CON SPUNTA ---
 async function fetchStorico() {
     const listaDiv = document.getElementById('lista-rapportini');
-    listaDiv.innerHTML = '<p style="padding:20px;">🔄 Aggiornamento archivio...</p>';
+    listaDiv.innerHTML = '<p style="padding:20px;">🔄 Caricamento...</p>';
     
     try {
         const { data, error } = await supabaseClient
@@ -92,33 +92,22 @@ async function fetchStorico() {
 
         if (error) throw error;
 
-        if (!data || data.length === 0) {
-            listaDiv.innerHTML = '<p style="padding:20px;">Nessun rapporto trovato.</p>';
-            return;
-        }
-
         listaDiv.innerHTML = data.map(r => `
-            <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: ${r.completato ? '#e8f5e9' : 'white'}; margin-bottom:5px; border-radius:8px; transition: 0.3s;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <input type="checkbox" 
-                           ${r.completato ? 'checked' : ''} 
+            <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: ${r.completato ? '#f1f8e9' : 'white'}; border-radius: 10px; margin-bottom: 8px; border-left: 5px solid ${r.completato ? '#4caf50' : '#004a99'};">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="checkbox" ${r.completato ? 'checked' : ''} 
                            onchange="toggleCompletato(${r.id}, this.checked)" 
-                           style="width: 20px; height: 20px; cursor: pointer;">
-                    
-                    <div style="opacity: ${r.completato ? '0.6' : '1'}">
-                        <strong style="color:#004a99;">${r.zona || 'N.D.'}</strong><br>
-                        <small>${r.data} - ${r.operatore || 'N.D.'}</small>
+                           style="width: 18px; height: 18px;">
+                    <div>
+                        <strong style="color: #333;">${r.zona || 'N.D.'}</strong><br>
+                        <small style="color: #666;">${r.data} • ${r.operatore}</small>
                     </div>
                 </div>
-                
-                <div>
-                    ${r.pdf_url ? `<a href="${r.pdf_url}" target="_blank" style="text-decoration:none; font-size: 24px;">📄</a>` : '⚠️'}
-                </div>
+                <a href="${r.pdf_url}" target="_blank" style="text-decoration:none; font-size: 20px;">📄</a>
             </div>
         `).join('');
-
     } catch (err) {
-        listaDiv.innerHTML = `<p style="padding:20px; color:red;">Errore: ${err.message}</p>`;
+        listaDiv.innerHTML = `<p style="color:red;">Errore: ${err.message}</p>`;
     }
 }
 
@@ -388,5 +377,6 @@ async function generaAnteprimaPDF() {
         alert("Errore anteprima: " + err.message);
     }
 }
+
 
 
