@@ -4,15 +4,13 @@ body {
     margin: 0; 
     background: #f0f2f5; 
     color: #333;
-    -webkit-tap-highlight-color: transparent; /* Migliora il tocco su smartphone */
 }
 
 /* HEADER E LOGO */
 .header-logo {
-    position: relative; /* Necessario per posizionare il tasto Home all'interno */
     width: 100%;
     background: white;
-    padding: 15px 0;
+    padding: 10px 0;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -23,27 +21,6 @@ body {
     height: 60px;
     width: auto;
     object-fit: contain;
-}
-
-/* NUOVO: Tasto Home nell'header durante la compilazione */
-.btn-home-icon {
-    position: absolute;
-    left: 15px;
-    background: #f0f2f5;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
-}
-
-.btn-home-icon:active {
-    background: #ddd;
 }
 
 /* NAVIGAZIONE A SCHEDE (TABS) */
@@ -91,70 +68,11 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* SCHERMATA PRINCIPALE (DASHBOARD) */
-.btn-main-menu {
-    width: 100%;
-    max-width: 320px;
-    padding: 22px;
-    margin: 12px auto;
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: white;
-    background: #004a99;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    display: block;
-    box-shadow: 0 4px 10px rgba(0,74,153,0.2);
-    transition: transform 0.2s;
-}
-
-.btn-main-menu:active {
-    transform: scale(0.96);
-}
-
-/* NUOVO: Tasto Indietro/Home nello Storico */
-.btn-back {
-    background: #004a99;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-weight: bold;
-    margin-bottom: 20px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* STORICO RAPPORTINI */
-.card-rapportino {
-    background: white;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border-left: 6px solid #004a99;
-}
-
-.azioni-storico {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr; /* Tre colonne per i tasti */
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.azioni-storico button {
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid #ddd;
-    background: #f8f9fa;
-    cursor: pointer;
-    font-size: 0.8rem;
-}
-
 /* FORM E INPUT */
+.input-group {
+    margin-bottom: 15px;
+}
+
 .input-group label { 
     display: block; 
     margin-top: 15px; 
@@ -163,7 +81,7 @@ body {
     color: #555;
 }
 
-.input-group input, .input-group select, textarea { 
+.input-group input, .input-group select { 
     width: 100%; 
     padding: 12px; 
     margin-top: 5px; 
@@ -172,30 +90,36 @@ body {
     box-sizing: border-box; 
     font-size: 1rem;
     background: white;
-    font-family: inherit;
 }
 
-/* RICERCA ARTICOLI */
+/* RICERCA ARTICOLI (SUPABASE) */
 .search-box {
     position: relative;
-    margin-bottom: 15px;
+    margin-bottom: 10px; /* Spazio sotto la casella */
 }
 
+/* QUESTA È LA PARTE NUOVA PER INGRANDIRE LA CASELLA */
 #searchArticolo {
     width: 100%;
-    padding: 16px;
-    font-size: 1.1rem;
-    border: 2px solid #005aab;
-    border-radius: 10px;
-    outline: none;
+    padding: 18px 15px;    /* Aumenta l'altezza interna */
+    font-size: 1.2rem;     /* Testo molto più grande */
+    border: 2px solid #005aab; /* Bordo blu più spesso */
+    border-radius: 10px;   /* Angoli arrotondati */
+    box-sizing: border-box;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* Leggera ombra */
+    outline: none;         /* Toglie il bordo brutto al clic */
+}
+
+#searchArticolo:focus {
+    border-color: #ff8c00; /* Cambia colore (Arancione) quando scrivi */
 }
 
 #risultatiRicerca { 
     position: absolute; 
     width: 100%;
-    z-index: 1001; 
+    z-index: 9999; 
     background: white; 
-    max-height: 280px; 
+    max-height: 250px; 
     overflow-y: auto; 
     box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
     border-radius: 0 0 10px 10px;
@@ -203,31 +127,121 @@ body {
     border-top: none;
 }
 
-/* FIRMA */
+.item-ricerca { 
+    padding: 15px; 
+    border-bottom: 1px solid #eee; 
+    cursor: pointer; 
+    font-size: 1.1rem; /* Ingrandito leggermente anche il testo dei risultati */
+    color: #333;
+}
+
+.item-ricerca:last-child { border-bottom: none; }
+.item-ricerca:active { background: #f0f7ff; }
+
+/* LISTA MATERIALI SELEZIONATI */
+.card-materiale { 
+    background: white; 
+    padding: 12px; 
+    margin-top: 10px; 
+    border-radius: 10px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 5px solid #004a99;
+}
+
+.card-materiale input { 
+    width: 60px; 
+    padding: 8px; 
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+/* FIRMA (CANVAS) */
+.firma-container {
+    text-align: center;
+}
+
 .canvas-wrapper {
     width: 100%;
-    background: white;
+    max-width: 500px;
+    margin: 0 auto;
     border: 2px dashed #004a99;
     border-radius: 10px;
-    margin-top: 10px;
+    background: white;
+    overflow: hidden;
 }
 
 #signature-pad {
+    display: block;
     width: 100%;
-    height: 200px;
-    touch-action: none;
+    height: 250px;
+    touch-action: none; /* Fondamentale per far funzionare il dito su smartphone */
 }
 
-/* BOTTONI AZIONE */
-.btn-send { background: #27ae60; color: white; border: none; padding: 18px; border-radius: 10px; cursor: pointer; font-size: 1.1rem; width: 100%; font-weight: bold; margin-top: 20px; }
-.btn-preview { background: #34495e; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 1rem; width: 100%; font-weight: bold; margin-top: 10px; }
-.btn-clear { background: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; margin-top: 10px; }
+.btn-clear {
+    margin-top: 10px;
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+}
 
-/* MODAL ANTEPRIMA FOTO */
-.modal {
-    display: none; 
-    position: fixed; 
-    z-index: 9999;
-    left: 0; top: 0; width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.9);
+/* BOTTONE INVIO FINALE */
+.btn-send { 
+    width: 100%; 
+    background: #28a745; 
+    color: white; 
+    padding: 20px; 
+    border: none; 
+    border-radius: 12px; 
+    font-size: 1.1rem; 
+    font-weight: bold; 
+    margin-top: 30px; 
+    box-shadow: 0 4px 6px rgba(40, 167, 69, 0.3);
+    cursor: pointer;
+}
+
+.btn-send:active {
+    transform: scale(0.98);
+    background: #218838;
+
+}
+
+.item-ricerca {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    gap: 15px; /* Spazio tra foto e testo */
+    border-bottom: 1px solid #eee;
+}
+
+.img-articolo {
+    width: 60px;  /* Leggermente più grande per visibilità */
+    height: 60px;
+    object-fit: cover; /* Taglia l'immagine senza deformarla */
+    border-radius: 6px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    flex-shrink: 0; /* Impedisce alla foto di rimpicciolirsi se il testo è lungo */
+}
+
+.info-articolo {
+    display: flex;
+    flex-direction: column;
+}
+
+.nome-articolo {
+    font-weight: bold;
+    font-size: 1rem;
+    color: #333;
+}
+
+.codice-articolo {
+    font-size: 0.85rem;
+    color: #777;
 }

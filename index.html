@@ -4,78 +4,110 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>App Rapportini</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        /* Aggiunta veloce per la descrizione e pulsante invio */
+        textarea { width: 100%; border-radius: 8px; border: 1px solid #ccc; padding: 20px; box-sizing: border-box; font-family: inherit; font-size: 14px; }
+        .btn-send { background: #27ae60; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; margin-top: 30px; }
+        .tabs { grid-template-columns: repeat(3, 1fr) !important; } /* Forza 3 colonne nella nav */
+    </style>
 </head>
 <body>
 
-<div id="home-screen" class="tab-content active">
-    <div style="text-align: center; padding: 40px 20px;">
-        <img src="logoapp.png" style="width: 150px; margin-bottom: 30px;">
-        <h2 style="color: #004a99;">Gestione Interventi</h2>
-        <button onclick="mostraApp()" class="btn-main-menu">➕ NUOVO RAPPORTO</button>
-        <button onclick="caricaStorico()" class="btn-main-menu" style="background: #6c757d;">📂 STORICO RAPPORTI</button>
+<div id="app">
+    <div class="header-logo" style="background: white; padding: 20px; text-align: center;">
+        <img src="logo lungo.png" alt="Logo Pannelli Termici" style="max-height: 80px; width: auto; display: block; margin: 0 auto;">
     </div>
-</div>
 
-<div id="tab-storico" class="tab-content" style="display:none;">
-    <div style="padding: 20px;">
-        <button onclick="tornaAllaHome()" class="btn-back">🏠 Torna alla Home</button>
-        <h3 style="color:#004a99;">Storico Rapportini</h3>
-        <div id="lista-rapportini"></div>
-    </div>
-</div>
-
-<div id="app-interface" style="display:none;">
-    <div class="header-logo">
-        <button onclick="tornaAllaHome()" class="btn-home-icon">🏠</button>
-        <img src="logo lungo.png" alt="Logo">
-    </div>
-    <nav id="app-nav" class="tabs">
+    <nav class="tabs">
         <button class="tab-btn active" onclick="openTab(event, 'tab1')">📋 DATI</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab2')">📦 MAT.</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab3')">✍️ FIRMA</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab2')">📦 MATERIALI</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab3')">✍️ FIRMA E CONFERMA</button>
     </nav>
-    </div>
 
-        <section id="tab1" class="tab-content">
-            <div class="input-group">
-                <label>Zona di Intervento</label>
-                <input type="text" id="zona" placeholder="Inserisci Zona...">
-                <label>Operatore</label>
-                <input type="text" id="operatore" placeholder="Nome Operatore">
-                <label>Data</label>
-                <input type="date" id="dataIntervento">
-                <label>Descrizione Lavoro</label>
-                <textarea id="descrizioneIntervento" rows="5" placeholder="Lavoro svolto..."></textarea>
+    <section id="tab1" class="tab-content active">
+        <div class="input-group">
+            <label>Zona di Intervento</label>
+            <input type="text" id="zona" placeholder="Inserisci Zona...">
+            
+            <label>Operatore</label>
+            <input type="text" id="operatore" placeholder="Nome e Cognome Operatore">
+            
+            <label>Data di Intervento</label>
+            <input type="date" id="dataIntervento">
+
+            <label style="margin-top: 15px;">Descrizione Intervento Eseguito</label>
+            <textarea id="descrizioneIntervento" rows="5" placeholder="Descrivi qui il lavoro svolto..."></textarea>
+        </div>
+    </section>
+
+    <section id="tab2" class="tab-content">
+        <div class="search-box">
+            <input type="text" id="searchArticolo" onkeyup="searchInDanea()" placeholder="Cerca nel DB Articoli...">
+        </div>
+        <div id="risultatiRicerca" class="lista-dropdown"></div>
+        
+        <h3>Articoli Selezionati</h3>
+        <div id="carrelloMateriali"></div>
+    </section>
+
+    <section id="tab3" class="tab-content">
+        <div class="foto-container">
+            <label>Foto Intervento</label>
+            <input type="file" id="fotoInput" accept="image/*" multiple>
+        </div>
+        <hr>
+        <div class="firma-container">
+            <label>Firma del Cliente</label>
+            <div class="canvas-wrapper">
+                <canvas id="signature-pad" style="border: 1px solid #ccc; width: 100%; height: 200px;"></canvas>
             </div>
-        </section>
+            <button class="btn-clear" onclick="signaturePad.clear()" style="margin-top: 10px;">Cancella Firma</button>
 
-        <section id="tab2" class="tab-content">
-            <div class="search-box">
-                <input type="text" id="searchArticolo" onkeyup="searchInDanea()" placeholder="Cerca articolo...">
-                <div id="risultatiRicerca"></div>
-            </div>
-            <h3>Selezionati:</h3>
-            <div id="carrelloMateriali"></div>
-        </section>
+            <div class="azioni-finali" style="margin-top: 20px;">
+    <button class="btn-preview" onclick="generaAnteprimaPDF()" style="background: #34495e; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; margin-bottom: 10px;">
+        👁️ ANTEPRIMA PDF
+    </button>
+    
+    <button class="btn-send" onclick="generaEInviaPDF()" style="background: #27ae60; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold;">
+        🚀 INVIA E SALVA RAPPORTO
+    </button>
+</div>
 
-        <section id="tab3" class="tab-content">
-            <div class="firma-container">
-                <label>Firma Cliente</label>
-                <div class="canvas-wrapper">
-                    <canvas id="signature-pad"></canvas>
-                </div>
-                <button class="btn-clear" onclick="signaturePad.clear()">Cancella Firma</button>
-                <input type="file" id="fotoInput" accept="image/*" multiple style="margin-top:20px;">
-                <button class="btn-preview" onclick="generaAnteprimaPDF()">👁️ ANTEPRIMA</button>
-                <button class="btn-send" onclick="generaEInviaPDF()">🚀 INVIA RAPPORTO</button>
-            </div>
-        </section>
-    </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="script.js"></script>
 
-    <script src="script.js"></script>
+<script>
+    // Inizializzazione rapida Signature Pad (da integrare eventualmente in script.js)
+    const canvas = document.getElementById('signature-pad');
+    const signaturePad = new SignaturePad(canvas);
+
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+</script>
+
 </body>
 </html>
+
+
+
