@@ -11,74 +11,55 @@
 </head>
 <body>
 
-    <div id="home-screen" style="display: block;"> 
-        <div style="text-align: center; padding: 40px 20px;">
-            <img src="logoapp.png" style="width: 150px; margin-bottom: 30px;" onerror="this.style.display='none'">
-            <h2 style="color: #004a99;">Gestione Interventi</h2>
-            <button onclick="mostraApp()" class="btn-main-menu">➕ NUOVO RAPPORTO</button>
-            <button onclick="caricaStorico()" class="btn-main-menu" style="background: #6c757d;">📂 STORICO RAPPORTI</button>
-        </div>
+<div id="home-screen">
+    <div style="text-align: center; padding: 40px 20px;">
+        <h2 style="color: #004a99;">Gestione Interventi</h2>
+        <button onclick="mostraApp()" class="btn-main-menu">➕ NUOVO RAPPORTO</button>
+        <button onclick="caricaStorico()" class="btn-main-menu" style="background: #6c757d;">📂 STORICO RAPPORTI</button>
     </div>
+</div>
 
-    <div id="tab-storico" class="tab-content" style="display:none;">
-        <div style="padding: 20px;">
-            <button onclick="tornaAllaHome()" class="btn-back">🏠 Torna alla Home</button>
-            <h3 style="color:#004a99;">Storico Rapportini</h3>
-            <div id="lista-rapportini"></div>
+<div id="tab-storico" style="display:none; padding: 20px;">
+    <button onclick="tornaAllaHome()" class="btn-back">🏠 Home</button>
+    <div id="lista-rapportini"></div>
+</div>
+
+<div id="app-interface" style="display:none;">
+    <nav class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'tab1')">📋 DATI</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab2')">📦 MAT.</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab3')">✍️ FIRMA</button>
+    </nav>
+
+    <section id="tab1" class="tab-content">
+        <div class="input-group">
+            <label>Zona</label><input type="text" id="zona">
+            <label>Operatore</label><input type="text" id="operatore">
+            <label>Data</label><input type="date" id="dataIntervento">
+            <label>Descrizione</label><textarea id="descrizioneIntervento" rows="5"></textarea>
         </div>
-    </div>
+    </section>
 
-    <div id="app-interface" style="display:none;">
-        <div class="header-logo">
-            <button onclick="tornaAllaHome()" class="btn-home-icon">🏠</button>
-            <img src="logo lungo.png" alt="Logo" onerror="this.style.display='none'">
+    <section id="tab2" class="tab-content" style="display:none;">
+        <input type="text" id="searchArticolo" onkeyup="searchInDanea()" placeholder="Cerca...">
+        <div id="risultatiRicerca"></div>
+        <div id="carrelloMateriali"></div>
+    </section>
+
+    <section id="tab3" class="tab-content" style="display:none;">
+        <div class="canvas-wrapper" style="border:1px solid #000; background:#fff;">
+            <canvas id="signature-pad"></canvas>
         </div>
-        
-        <nav id="app-nav" class="tabs">
-            <button class="tab-btn active" onclick="openTab(event, 'tab1')">📋 DATI</button>
-            <button class="tab-btn" onclick="openTab(event, 'tab2')">📦 MAT.</button>
-            <button class="tab-btn" onclick="openTab(event, 'tab3')">✍️ FIRMA</button>
-        </nav>
+        <button onclick="signaturePad.clear()">Cancella Firma</button>
+        <br><br>
+        <label>Allega Foto</label>
+        <input type="file" id="fotoInput" accept="image/*" multiple>
+        <br><br>
+        <button class="btn-preview" onclick="generaAnteprimaPDF()">👁️ ANTEPRIMA</button>
+        <button class="btn-send" onclick="generaEInviaPDF()">🚀 INVIA RAPPORTO</button>
+    </section>
+</div>
 
-        <section id="tab1" class="tab-content">
-            <div class="input-group">
-                <label>Zona di Intervento</label>
-                <input type="text" id="zona" placeholder="Inserisci Zona...">
-                <label>Operatore</label>
-                <input type="text" id="operatore" placeholder="Nome Operatore">
-                <label>Data</label>
-                <input type="date" id="dataIntervento">
-                <label>Descrizione Lavoro</label>
-                <textarea id="descrizioneIntervento" rows="5" placeholder="Lavoro svolto..."></textarea>
-            </div>
-        </section>
-
-        <section id="tab2" class="tab-content" style="display:none;">
-            <div class="search-box">
-                <input type="text" id="searchArticolo" onkeyup="searchInDanea()" placeholder="Cerca articolo...">
-                <div id="risultatiRicerca"></div>
-            </div>
-            <h3>Selezionati:</h3>
-            <div id="carrelloMateriali"></div>
-        </section>
-
-        <section id="tab3" class="tab-content" style="display:none;">
-            <div class="firma-container">
-                <label>Firma Cliente</label>
-                <div class="canvas-wrapper" style="border: 1px solid #ccc; background: #fff;">
-                    <canvas id="signature-pad"></canvas>
-                </div>
-                <button class="btn-clear" onclick="signaturePad.clear()" style="margin-top:10px;">Cancella Firma</button>
-                
-                <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
-                    <button class="btn-preview" onclick="generaAnteprimaPDF()">👁️ ANTEPRIMA</button>
-                    <button class="btn-send" onclick="generaEInviaPDF()">🚀 INVIA RAPPORTO</button>
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
-
